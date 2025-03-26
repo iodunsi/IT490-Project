@@ -1,5 +1,5 @@
 <?php
-require_once('rabbitMQLib.inc');
+require_once( __DIR__ .'/../rabbitMQLib.inc');
 
 try {
     $client = new rabbitMQClient("emailRabbitMQ.ini", "emailQueue");
@@ -8,7 +8,7 @@ try {
         "type" => "send_email",
         "to" => "test@example.com",
         "subject" => "Test Email",
-        "message" => "This is a test email from RabbitMQ!"
+        "message" => "This is a test email from PHPMailer via RabbitMQ!"
     ];
 
     echo "[DEBUG] Sending email request to RabbitMQ...\n";
@@ -23,5 +23,4 @@ try {
 } catch (Exception $e) {
     echo "[ERROR] Exception: " . $e->getMessage() . "\n";
 }
-
 ?>
