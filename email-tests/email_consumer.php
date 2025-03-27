@@ -99,4 +99,3 @@ try {
     echo "[ERROR] Failed to connect to RabbitMQ: " . $e->getMessage() . "\n";
 }
 ?>
-
