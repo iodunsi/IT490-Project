@@ -6,6 +6,12 @@ header("Content-Type: application/json");
 ini_set("log_errors", 1);
 ini_set("error_log", "/var/log/php_errors.log");
 
+
+ini_set("session.cookie_secure", 1);
+ini_set("session.cookie_httponly", 1);
+ini_set("session.use_only_cookies", 1);
+ini_set("session.use_strict_mode", 1);
+
 session_start();
 
 class RabbitMQConnection {
