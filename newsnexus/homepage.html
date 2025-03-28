@@ -89,6 +89,39 @@
         border-radius: 25px;
         margin-left: 10px;
       }
+      .like-button {
+        background-color: #f0f0f0;
+        color: #333;
+        border: 1px solid #ddd;
+        transition: all 0.3s ease;
+      }
+
+      .like-button:hover {
+        background-color: #007bff;
+        color: white;
+      }
+
+      .star {
+        font-size: 1.5rem;
+        color: gray;
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+
+      .star.active {
+        color: gold;
+      }
+
+      .star:hover,
+      .star.active:hover {
+        color: orange;
+      }
+
+      .rating-text {
+        margin-left: 10px;
+        font-weight: bold;
+        color: #555;
+      }
     </style>
 
     <script>
