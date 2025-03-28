@@ -8,31 +8,28 @@ require_once('mysqlconnect.php');
 ini_set("log_errors", 1);
 ini_set("error_log", "/var/log/rabbitmq_errors.log");
 
-
+// 🔧 Load Environment Variables
 function loadEnv() {
     if (!file_exists('.env')) {
         error_log("Error: .env file not found");
         return;
     }
-    $lines = file('.env');
-    foreach ($lines as $line) {
-        if (strpos(trim($line), '#') === 0) continue;
-        $keyValue = explode('=', trim($line), 2);
-        if (count($keyValue) == 2) {
-            putenv(trim($keyValue[0]) . '=' . trim($keyValue[1]));
+    foreach (file('.env') as $line) {
+        $line = trim($line);
+        if ($line && strpos($line, '#') !== 0) {
+            putenv($line);
         }
     }
 }
 
-loadEnv();
-
+// 🔗 Get Database Connection
 function getDatabaseConnection() {
-    $dbHost = getenv("DB_HOST");
-    $dbUser = getenv("DB_USER");
-    $dbPassword = getenv("DB_PASSWORD");
-    $dbName = getenv("DB_NAME");
-
-    $db = new mysqli($dbHost, $dbUser, $dbPassword, $dbName);
+    $db = new mysqli(
+        getenv("DB_HOST"),
+        getenv("DB_USER"),
+        getenv("DB_PASSWORD"),
+        getenv("DB_NAME")
+    );
 
     if ($db->connect_errno) {
         error_log("Database connection failed: " . $db->connect_error);
@@ -41,19 +38,27 @@ function getDatabaseConnection() {
     return $db;
 }
 
-// ✅ Process login, registration, and logout
-function requestProcessor($request) {
-$sanitizedRequest = $request;
-if (isset($sanitizedRequest['password'])) {
-    $sanitizedRequest['password'] = '[REDACTED]';
+// 📝 Send JSON Response
+function jsonResponse($status, $message) {
+    return ["status" => $status, "message" => $message];
 }
 
-echo "[RABBITMQ VM] 📩 Processing request: " . json_encode($sanitizedRequest) . "\n";
-error_log("[RABBITMQ VM] 📩 Processing request: " . json_encode($sanitizedRequest) . "\n", 3, "/var/log/rabbitmq_errors.log");
+// 🛑 Log Error
+function logError($message) {
+    error_log("[ERROR] ❌ " . $message);
+}
 
+// ✅ Process RabbitMQ Request
+function requestProcessor($request) {
+    $sanitizedRequest = $request;
+    if (isset($sanitizedRequest['password'])) {
+        $sanitizedRequest['password'] = '[REDACTED]';
+    }
+
+    error_log("[RABBITMQ VM] 📩 Processing request: " . json_encode($sanitizedRequest) . "\n");
 
     if (!isset($request['type'])) {
-        return ["status" => "error", "message" => "Unsupported request type"];
+        return jsonResponse("error", "Unsupported request type");
     }
 
     return match ($request['type']) {
@@ -61,21 +66,17 @@ error_log("[RABBITMQ VM] 📩 Processing request: " . json_encode($sanitizedRequ
         "register" => registerUser($request),
         "logout" => logoutUser($request),
         "like" => likeArticle($request),
-        default => ["status" => "error", "message" => "Unknown request type"]
+        default => jsonResponse("error", "Unknown request type: " . $request['type'])
     };
 }
 
-// ✅ Validate user login credentials
+// 🔑 Validate User Login
 function validateLogin($username, $password) {
     $db = getDatabaseConnection();
+    if (!$db) return jsonResponse("error", "Database connection failed");
 
-    if ($db->connect_errno) {
-        return ["status" => "error", "message" => "Database connection failed"];
-    }
-
-    // ✅ Fetch password hash
     $stmt = $db->prepare("SELECT password FROM users WHERE username = ?");
-    if (!$stmt) return ["status" => "error", "message" => "Database error"];
+    if (!$stmt) return jsonResponse("error", "Database error");
 
     $stmt->bind_param("s", $username);
     $stmt->execute();
@@ -83,8 +84,7 @@ function validateLogin($username, $password) {
 
     if ($stmt->num_rows === 0) {
         $stmt->close();
-        $db->close();
-        return ["status" => "error", "message" => "User not found"];
+        return jsonResponse("error", "User not found");
     }
 
     $stmt->bind_result($hashedPassword);
@@ -92,36 +92,16 @@ function validateLogin($username, $password) {
     $stmt->close();
 
     if (!password_verify($password, $hashedPassword)) {
-        $db->close();
-        return ["status" => "error", "message" => "Incorrect password"];
+        return jsonResponse("error", "Incorrect password");
     }
 
-    // ✅ Generate and store session key
-    $sessionKey = bin2hex(random_bytes(32));
-    $sessionExpiration = date("Y-m-d H:i:s", strtotime("+1 hour"));
-
-    $stmt = $db->prepare("UPDATE users SET session_key = ?, session_expires = ? WHERE username = ?");
-    if (!$stmt) return ["status" => "error", "message" => "Failed to create session"];
-
-    $stmt->bind_param("sss", $sessionKey, $sessionExpiration, $username);
-    $stmt->execute();
-    $stmt->close();
-    $db->close();
-
-    return [
-        "status" => "success",
-        "message" => "Login successful",
-        "user_id" => $username,
-        "session_key" => $sessionKey,
-        "expires_at" => $sessionExpiration
-    ];
+    return jsonResponse("success", "Login successful");
 }
 
-// ✅ Register new user
+// 📝 Register New User
 function registerUser($data) {
     $db = getDatabaseConnection();
-
-    if ($db->connect_errno) return ["status" => "error", "message" => "Database connection failed"];
+    if (!$db) return jsonResponse("error", "Database connection failed");
 
     $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
     $stmt->bind_param("s", $data['username']);
@@ -130,148 +110,79 @@ function registerUser($data) {
 
     if ($stmt->num_rows > 0) {
         $stmt->close();
-        $db->close();
-        return ["status" => "error", "message" => "Username already exists"];
+        return jsonResponse("error", "Username already exists");
     }
 
     $stmt->close();
+    $stmt = $db->prepare("INSERT INTO users (username, password, first_name, last_name, dob, email, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+    if (!$stmt) return jsonResponse("error", "Database error");
 
-$stmt = $db->prepare("INSERT INTO users (username, password, first_name, last_name, dob, email, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-if (!$stmt) return ["status" => "error", "message" => "Database error"];
+    $stmt->bind_param("ssssss", $data['username'], $data['password'], $data['first_name'], $data['last_name'], $data['dob'], $data['email']);
+    $result = $stmt->execute();
+    $stmt->close();
 
-$stmt->bind_param("ssssss", $data['username'], $data['password'], $data['first_name'], $data['last_name'], $data['dob'], $data['email']);
-if ($stmt->execute()) {
-    $stmt->close();
-    $db->close();
-    return ["status" => "success", "message" => "User registered successfully"];
-} else {
-    $stmt->close();
-    $db->close();
-    return ["status" => "error", "message" => "User registration failed"];
+    return $result ? jsonResponse("success", "User registered successfully") : jsonResponse("error", "Registration failed");
 }
 
-}
-
-// ✅ Logout user (clear session key)
+// 🚪 Logout User
 function logoutUser($data) {
     $db = getDatabaseConnection();
-
-    if ($db->connect_errno) return ["status" => "error", "message" => "Database connection failed"];
+    if (!$db) return jsonResponse("error", "Database connection failed");
 
     $stmt = $db->prepare("UPDATE users SET session_key = NULL, session_expires = NULL WHERE username = ?");
-    if (!$stmt) return ["status" => "error", "message" => "Database error"];
-
     $stmt->bind_param("s", $data['username']);
-    if ($stmt->execute()) {
-        $stmt->close();
-        $db->close();
-        return ["status" => "success", "message" => "User logged out successfully"];
-    } else {
-        $stmt->close();
-        $db->close();
-        return ["status" => "error", "message" => "Logout failed"];
-    }
+    $result = $stmt->execute();
+    $stmt->close();
+
+    return $result ? jsonResponse("success", "User logged out successfully") : jsonResponse("error", "Logout failed");
 }
 
+// 👍 Like Article
 function likeArticle($request) {
     $db = getDatabaseConnection();
-    if (!$db) {
-        error_log("[LIKE] ❌ ERROR: Database connection failed");
-        return ["status" => "error", "message" => "Database connection failed"];
-    }
+    if (!$db) return jsonResponse("error", "Database connection failed");
 
-    $username = $request['user'];
+    $userId = $request['user'];
     $articleId = $request['articleId'];
     $title = $request['title'];
     $url = $request['url'];
     $category = $request['category'] ?? "Uncategorized";
     $timestamp = date("Y-m-d H:i:s");
 
-    // ✅ Log incoming like request
-    error_log("[LIKE] 📝 Received Like Request for article: $title from user: $username");
-
-    // ✅ Get user ID from the database (assuming the users table has a username field)
-    $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
-    if (!$stmt) {
-        error_log("[LIKE] ❌ ERROR: Failed to prepare user ID query: " . $db->error);
-        return ["status" => "error", "message" => "Database error"];
-    }
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $stmt->bind_result($userId);
-    $stmt->fetch();
-    $stmt->close();
-
-    if (empty($userId)) {
-        error_log("[LIKE] ❌ ERROR: User ID not found for username: $username");
-        return ["status" => "error", "message" => "User not found"];
-    }
-
-    // ✅ Check if the like already exists to prevent duplicate likes
     $stmt = $db->prepare("SELECT id FROM likes WHERE user_id = ? AND article_id = ?");
-    if (!$stmt) {
-        error_log("[LIKE] ❌ ERROR: Database statement preparation failed: " . $db->error);
-        return ["status" => "error", "message" => "Database error"];
-    }
-
-    $stmt->bind_param("is", $userId, $articleId);
+    $stmt->bind_param("ss", $userId, $articleId);
     $stmt->execute();
     $stmt->store_result();
 
     if ($stmt->num_rows > 0) {
         $stmt->close();
-        $db->close();
-        error_log("[LIKE] ❌ ERROR: Duplicate like detected for article ID: $articleId by user ID: $userId");
-        return ["status" => "error", "message" => "Already liked"];
+        return jsonResponse("error", "Already liked");
     }
+
+    $stmt->close();
+    $stmt = $db->prepare("INSERT INTO likes (user_id, article_id, title, url, category, liked_at) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssss", $userId, $articleId, $title, $url, $category, $timestamp);
+    $result = $stmt->execute();
     $stmt->close();
 
-    // ✅ Insert like data into the likes table
-    $stmt = $db->prepare("INSERT INTO likes (user_id, article_id, title, url, category, liked_at) VALUES (?, ?, ?, ?, ?, ?)");
-    if (!$stmt) {
-        error_log("[LIKE] ❌ ERROR: Database error: " . $db->error);
-        return ["status" => "error", "message" => "Database error"];
-    }
-
-    $stmt->bind_param("isssss", $userId, $articleId, $title, $url, $category, $timestamp);
-    if ($stmt->execute()) {
-        $stmt->close();
-        $db->close();
-        error_log("[LIKE] 🟢 SUCCESS: Like saved successfully for article: $title");
-        return ["status" => "success", "message" => "Article liked successfully"];
-    } else {
-        error_log("[LIKE] ❌ ERROR: Failed to save like: " . $stmt->error);
-        $stmt->close();
-        $db->close();
-        return ["status" => "error", "message" => "Failed to save like"];
-    }
+    return $result ? jsonResponse("success", "Article liked successfully") : jsonResponse("error", "Failed to save like");
 }
 
-
+// 🚀 RabbitMQ Server Initialization
 echo "[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n";
 error_log("[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n", 3, "/var/log/rabbitmq_errors.log");
 
 $loginServer = new rabbitMQServer("testRabbitMQ.ini", "loginQueue");
 $registerServer = new rabbitMQServer("testRabbitMQ.ini", "registerQueue");
-$likeServer = new rabbitMQServer("testRabbitMQ.ini", "newsQueue");  // 🚀 NEW: Like Queue
+$likeServer = new rabbitMQServer("testRabbitMQ.ini", "newsQueue");
 
-// ✅ Process requests for all queues
-$pid1 = pcntl_fork();
-if ($pid1 == 0) {
-    $loginServer->process_requests("requestProcessor");
-    exit();
-}
-
-$pid2 = pcntl_fork();
-if ($pid2 == 0) {
-    $registerServer->process_requests("requestProcessor");
-    exit();
-}
-
-$pid3 = pcntl_fork();
-if ($pid3 == 0) {
-    $likeServer->process_requests("requestProcessor");
-    exit();
+// 🛑 Handle Forks for Each Server
+foreach ([$loginServer, $registerServer, $likeServer] as $server) {
+    $pid = pcntl_fork();
+    if ($pid == 0) {
+        $server->process_requests("requestProcessor");
+        exit();
+    }
 }
 
 // ✅ Parent process waits for child processes
@@ -281,5 +192,3 @@ pcntl_wait($status);
 
 exit();
 ?>
-
-
