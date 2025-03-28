@@ -10,8 +10,14 @@ ini_set("error_log", "/var/log/rabbitmq_errors.log");
 
 // ✅ Process login, registration, and logout
 function requestProcessor($request) {
-    echo "[RABBITMQ VM] 📩 Processing request: " . json_encode($request) . "\n";
-    error_log("[RABBITMQ VM] 📩 Processing request: " . json_encode($request) . "\n", 3, "/var/log/rabbitmq_errors.log");
+$sanitizedRequest = $request;
+if (isset($sanitizedRequest['password'])) {
+    $sanitizedRequest['password'] = '[REDACTED]';
+}
+
+echo "[RABBITMQ VM] 📩 Processing request: " . json_encode($sanitizedRequest) . "\n";
+error_log("[RABBITMQ VM] 📩 Processing request: " . json_encode($sanitizedRequest) . "\n", 3, "/var/log/rabbitmq_errors.log");
+
 
     if (!isset($request['type'])) {
         return ["status" => "error", "message" => "Unsupported request type"];
