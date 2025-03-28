@@ -49,7 +49,12 @@ $title = isset($logData['title']) ? trim($logData['title']) : null;
 $url = isset($logData['url']) ? trim($logData['url']) : null;
 $category = isset($logData['category']) ? trim($logData['category']) : 'Uncategorized';
 $timestamp = isset($logData['timestamp']) ? trim($logData['timestamp']) : null;
-$user = isset($_SESSION['username']) ? $_SESSION['username'] : 'anonymous';
+
+if (!isset($_SESSION['username']) || empty($_SESSION['username'])) {
+    echo json_encode(["status" => "error", "message" => "User not logged in"]);
+    exit();
+}
+$user = $_SESSION['username'];
 
 if (empty($articleId) || empty($title) || empty($url) || empty($timestamp)) {
     echo json_encode(["status" => "error", "message" => "Missing required fields"]);
