@@ -34,8 +34,14 @@ class RabbitMQConnection {
     }
 }
 
-// ✅ Capture user login attempt
-error_log("[LOGIN] 📩 Request received: " . json_encode($_POST));
+// Sanitize the POST data to remove the password before logging
+$logData = $_POST;
+if (isset($logData['pword'])) {
+    $logData['pword'] = '[REDACTED]';
+}
+
+error_log("[LOGIN] 📩 Request received: " . json_encode($logData));
+
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     echo json_encode(["status" => "error", "message" => "Invalid request method"]);

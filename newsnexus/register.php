@@ -7,8 +7,14 @@ ini_set("error_log", "/var/log/php_errors.log");
 
 session_start();
 
-// Capture user registration attempt
-error_log("[REGISTER] 📩 Request received: " . json_encode($_POST));
+// Sanitize log by removing the password field
+$logData = $_POST;
+if (isset($logData['pword'])) {
+    $logData['pword'] = '[REDACTED]';
+}
+
+error_log("[REGISTER] 📩 Request received: " . json_encode($logData));
+
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     echo json_encode(["status" => "error", "message" => "Invalid request method"]);
