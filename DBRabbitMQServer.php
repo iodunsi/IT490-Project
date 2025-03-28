@@ -27,6 +27,7 @@ error_log("[RABBITMQ VM] 📩 Processing request: " . json_encode($sanitizedRequ
         "login" => validateLogin($request['username'], $request['password']),
         "register" => registerUser($request),
         "logout" => logoutUser($request),
+        "like" => likeArticle($request),
         default => ["status" => "error", "message" => "Unknown request type"]
     };
 }
@@ -102,8 +103,6 @@ function registerUser($data) {
 
     $stmt->close();
 
-    // ✅ Insert new user
-    // ✅ Insert new user with email
 $stmt = $db->prepare("INSERT INTO users (username, password, first_name, last_name, dob, email, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
 if (!$stmt) return ["status" => "error", "message" => "Database error"];
 
@@ -141,14 +140,57 @@ function logoutUser($data) {
     }
 }
 
-// ✅ Start RabbitMQ Servers for `loginQueue` and `registerQueue`
+function likeArticle($request) {
+    $db = new mysqli("127.0.0.1", "testUser", "12345", "login");
+
+    if ($db->connect_errno) {
+        return ["status" => "error", "message" => "Database connection failed"];
+    }
+
+    $username = $request['user'];
+    $articleId = $request['articleId'];
+    $title = $request['title'];
+    $url = $request['url'];
+    $category = $request['category'];
+    $timestamp = date("Y-m-d H:i:s");
+
+    // ✅ Check if the like already exists to prevent duplicate likes
+    $stmt = $db->prepare("SELECT id FROM likes WHERE user = ? AND articleId = ?");
+    $stmt->bind_param("ss", $username, $articleId);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        $stmt->close();
+        $db->close();
+        return ["status" => "error", "message" => "Already liked"];
+    }
+    $stmt->close();
+
+    // ✅ Insert like data into the likes table
+    $stmt = $db->prepare("INSERT INTO likes (user, articleId, title, url, category, liked_at) VALUES (?, ?, ?, ?, ?, ?)");
+    if (!$stmt) return ["status" => "error", "message" => "Database error: " . $db->error];
+
+    $stmt->bind_param("ssssss", $username, $articleId, $title, $url, $category, $timestamp);
+    if ($stmt->execute()) {
+        $stmt->close();
+        $db->close();
+        return ["status" => "success", "message" => "Article liked successfully"];
+    } else {
+        $stmt->close();
+        $db->close();
+        return ["status" => "error", "message" => "Failed to save like"];
+    }
+}
+
 echo "[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n";
 error_log("[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n", 3, "/var/log/rabbitmq_errors.log");
 
 $loginServer = new rabbitMQServer("testRabbitMQ.ini", "loginQueue");
 $registerServer = new rabbitMQServer("testRabbitMQ.ini", "registerQueue");
+$likeServer = new rabbitMQServer("testRabbitMQ.ini", "likeQueue");  // 🚀 NEW: Like Queue
 
-// ✅ Process requests for both queues
+// ✅ Process requests for all queues
 $pid1 = pcntl_fork();
 if ($pid1 == 0) {
     $loginServer->process_requests("requestProcessor");
@@ -161,7 +203,14 @@ if ($pid2 == 0) {
     exit();
 }
 
+$pid3 = pcntl_fork();
+if ($pid3 == 0) {
+    $likeServer->process_requests("requestProcessor");
+    exit();
+}
+
 // ✅ Parent process waits for child processes
+pcntl_wait($status);
 pcntl_wait($status);
 pcntl_wait($status);
 
