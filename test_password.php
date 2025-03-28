@@ -8,7 +8,7 @@ if (password_verify($inputPassword, $storedHash)) {
     echo "❌ Incorrect password.\n";
 }
 
-$password = "khaziX3214@";
+$password = "test";
 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 echo "Hashed Password: " . $hashedPassword . "\n";
 
