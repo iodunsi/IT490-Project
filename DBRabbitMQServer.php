@@ -175,8 +175,8 @@ function logoutUser($data) {
 
 function likeArticle($request) {
     $db = getDatabaseConnection();
-
-    if ($db->connect_errno) {
+    if (!$db) {
+        error_log("[LIKE] ❌ ERROR: Database connection failed");
         return ["status" => "error", "message" => "Database connection failed"];
     }
 
@@ -184,37 +184,69 @@ function likeArticle($request) {
     $articleId = $request['articleId'];
     $title = $request['title'];
     $url = $request['url'];
-    $category = $request['category'];
+    $category = $request['category'] ?? "Uncategorized";
     $timestamp = date("Y-m-d H:i:s");
 
+    // ✅ Log incoming like request
+    error_log("[LIKE] 📝 Received Like Request for article: $title from user: $username");
+
+    // ✅ Get user ID from the database (assuming the users table has a username field)
+    $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
+    if (!$stmt) {
+        error_log("[LIKE] ❌ ERROR: Failed to prepare user ID query: " . $db->error);
+        return ["status" => "error", "message" => "Database error"];
+    }
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $stmt->bind_result($userId);
+    $stmt->fetch();
+    $stmt->close();
+
+    if (empty($userId)) {
+        error_log("[LIKE] ❌ ERROR: User ID not found for username: $username");
+        return ["status" => "error", "message" => "User not found"];
+    }
+
     // ✅ Check if the like already exists to prevent duplicate likes
-    $stmt = $db->prepare("SELECT id FROM likes WHERE user = ? AND articleId = ?");
-    $stmt->bind_param("ss", $username, $articleId);
+    $stmt = $db->prepare("SELECT id FROM likes WHERE user_id = ? AND article_id = ?");
+    if (!$stmt) {
+        error_log("[LIKE] ❌ ERROR: Database statement preparation failed: " . $db->error);
+        return ["status" => "error", "message" => "Database error"];
+    }
+
+    $stmt->bind_param("is", $userId, $articleId);
     $stmt->execute();
     $stmt->store_result();
 
     if ($stmt->num_rows > 0) {
         $stmt->close();
         $db->close();
+        error_log("[LIKE] ❌ ERROR: Duplicate like detected for article ID: $articleId by user ID: $userId");
         return ["status" => "error", "message" => "Already liked"];
     }
     $stmt->close();
 
     // ✅ Insert like data into the likes table
-    $stmt = $db->prepare("INSERT INTO likes (user, articleId, title, url, category, liked_at) VALUES (?, ?, ?, ?, ?, ?)");
-    if (!$stmt) return ["status" => "error", "message" => "Database error: " . $db->error];
+    $stmt = $db->prepare("INSERT INTO likes (user_id, article_id, title, url, category, liked_at) VALUES (?, ?, ?, ?, ?, ?)");
+    if (!$stmt) {
+        error_log("[LIKE] ❌ ERROR: Database error: " . $db->error);
+        return ["status" => "error", "message" => "Database error"];
+    }
 
-    $stmt->bind_param("ssssss", $username, $articleId, $title, $url, $category, $timestamp);
+    $stmt->bind_param("isssss", $userId, $articleId, $title, $url, $category, $timestamp);
     if ($stmt->execute()) {
         $stmt->close();
         $db->close();
+        error_log("[LIKE] 🟢 SUCCESS: Like saved successfully for article: $title");
         return ["status" => "success", "message" => "Article liked successfully"];
     } else {
+        error_log("[LIKE] ❌ ERROR: Failed to save like: " . $stmt->error);
         $stmt->close();
         $db->close();
         return ["status" => "error", "message" => "Failed to save like"];
     }
 }
+
 
 echo "[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n";
 error_log("[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n", 3, "/var/log/rabbitmq_errors.log");
