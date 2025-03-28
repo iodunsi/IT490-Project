@@ -89,7 +89,7 @@ try {
     }
 
     // ✅ Send the request and wait for a response
-    $response = $client->publish($request);
+    $response = $client->send_request($request);
 
     error_log("[LIKE] 📬 Received response from RabbitMQ Broker: " . json_encode($response));
 
