@@ -160,11 +160,44 @@ function likeArticle($request) {
     $db = getDatabaseConnection();
     if (!$db) return ["status" => "error", "message" => "Database connection failed"];
 
-    $stmt = $db->prepare("INSERT INTO likes (user_id, article_id, title, url, category, liked_at) VALUES (?, ?, ?, ?, ?, NOW())");
-    if (!$stmt) return ["status" => "error", "message" => "Database error"];
+    // Fetch the user ID based on the username
+    $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
+    if (!$stmt) {
+        error_log("Database error while preparing statement: " . $db->error);
+        return ["status" => "error", "message" => "Database error"];
+    }
 
-    $stmt->bind_param("issss", $request['user'], $request['articleId'], $request['title'], $request['url'], $request['category']);
+    $stmt->bind_param("s", $request['user']);
     $stmt->execute();
+    $stmt->store_result();
+    
+    // Check if the user exists
+    if ($stmt->num_rows === 0) {
+        $stmt->close();
+        $db->close();
+        return ["status" => "error", "message" => "User not found"];
+    }
+
+    // Bind the result to the user ID variable
+    $stmt->bind_result($userId);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Insert the like record
+    $stmt = $db->prepare("INSERT INTO likes (user_id, article_id, title, url, category, liked_at) VALUES (?, ?, ?, ?, ?, NOW())");
+    if (!$stmt) {
+        error_log("Database error while preparing insert statement: " . $db->error);
+        return ["status" => "error", "message" => "Database error"];
+    }
+
+    $stmt->bind_param("issss", $userId, $request['articleId'], $request['title'], $request['url'], $request['category']);
+    if (!$stmt->execute()) {
+        error_log("Database error while executing insert statement: " . $stmt->error);
+        $stmt->close();
+        $db->close();
+        return ["status" => "error", "message" => "Error inserting like record"];
+    }
+
     $stmt->close();
     $db->close();
 
