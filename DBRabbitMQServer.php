@@ -8,6 +8,39 @@ require_once('mysqlconnect.php');
 ini_set("log_errors", 1);
 ini_set("error_log", "/var/log/rabbitmq_errors.log");
 
+
+function loadEnv() {
+    if (!file_exists('.env')) {
+        error_log("Error: .env file not found");
+        return;
+    }
+    $lines = file('.env');
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) continue;
+        $keyValue = explode('=', trim($line), 2);
+        if (count($keyValue) == 2) {
+            putenv(trim($keyValue[0]) . '=' . trim($keyValue[1]));
+        }
+    }
+}
+
+loadEnv();
+
+function getDatabaseConnection() {
+    $dbHost = getenv("DB_HOST");
+    $dbUser = getenv("DB_USER");
+    $dbPassword = getenv("DB_PASSWORD");
+    $dbName = getenv("DB_NAME");
+
+    $db = new mysqli($dbHost, $dbUser, $dbPassword, $dbName);
+
+    if ($db->connect_errno) {
+        error_log("Database connection failed: " . $db->connect_error);
+        return null;
+    }
+    return $db;
+}
+
 // ✅ Process login, registration, and logout
 function requestProcessor($request) {
 $sanitizedRequest = $request;
@@ -34,7 +67,7 @@ error_log("[RABBITMQ VM] 📩 Processing request: " . json_encode($sanitizedRequ
 
 // ✅ Validate user login credentials
 function validateLogin($username, $password) {
-    $db = new mysqli("127.0.0.1", "testUser", "12345", "login");
+    $db = getDatabaseConnection();
 
     if ($db->connect_errno) {
         return ["status" => "error", "message" => "Database connection failed"];
@@ -86,7 +119,7 @@ function validateLogin($username, $password) {
 
 // ✅ Register new user
 function registerUser($data) {
-    $db = new mysqli("127.0.0.1", "testUser", "12345", "login");
+    $db = getDatabaseConnection();
 
     if ($db->connect_errno) return ["status" => "error", "message" => "Database connection failed"];
 
@@ -121,7 +154,7 @@ if ($stmt->execute()) {
 
 // ✅ Logout user (clear session key)
 function logoutUser($data) {
-    $db = new mysqli("127.0.0.1", "testUser", "12345", "login");
+    $db = getDatabaseConnection();
 
     if ($db->connect_errno) return ["status" => "error", "message" => "Database connection failed"];
 
@@ -141,7 +174,7 @@ function logoutUser($data) {
 }
 
 function likeArticle($request) {
-    $db = new mysqli("127.0.0.1", "testUser", "12345", "login");
+    $db = getDatabaseConnection();
 
     if ($db->connect_errno) {
         return ["status" => "error", "message" => "Database connection failed"];
@@ -188,7 +221,7 @@ error_log("[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n", 3, 
 
 $loginServer = new rabbitMQServer("testRabbitMQ.ini", "loginQueue");
 $registerServer = new rabbitMQServer("testRabbitMQ.ini", "registerQueue");
-$likeServer = new rabbitMQServer("testRabbitMQ.ini", "likeQueue");  // 🚀 NEW: Like Queue
+$likeServer = new rabbitMQServer("testRabbitMQ.ini", "newsQueue");  // 🚀 NEW: Like Queue
 
 // ✅ Process requests for all queues
 $pid1 = pcntl_fork();
