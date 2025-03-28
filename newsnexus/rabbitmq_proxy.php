@@ -15,7 +15,7 @@ class RabbitMQConnection {
         if (self::$client === null) {
             error_log("[RABBITMQ] 🔴 Establishing NEW RabbitMQ connection to Broker VM...");
             try {
-                self::$client = new rabbitMQClient("testRabbitMQ.ini", "newsQueue");
+                self::$client = new rabbitMQClient("/home/paa39/git/IT490-Project/testRabbitMQ.ini", "newsQueue");
             } catch (Exception $e) {
                 error_log("[RABBITMQ] ❌ ERROR: Could not connect to RabbitMQ Broker - " . $e->getMessage());
                 return null;
@@ -59,8 +59,10 @@ $articleId = $request['articleId'] ?? null;
 $title = $request['title'] ?? null;
 $url = $request['url'] ?? null;
 $category = $request['category'] ?? null;
+$timestamp = date("Y-m-d H:i:s");
 
 if (!$articleId || !$title || !$url || !$category) {
+    error_log("[LIKE] ❌ ERROR: Invalid article data");
     echo json_encode(["status" => "error", "message" => "Invalid article data"]);
     exit();
 }
@@ -72,12 +74,14 @@ $likeRequest = [
     "articleId" => $articleId,
     "title" => $title,
     "url" => $url,
-    "category" => $category
+    "category" => $category,
+    "timestamp" => $timestamp
 ];
 
 try {
     $client = RabbitMQConnection::getClient();
     if (!$client) {
+        error_log("[LIKE] ❌ ERROR: Could not establish RabbitMQ connection");
         echo json_encode(["status" => "error", "message" => "Could not connect to RabbitMQ"]);
         exit();
     }
@@ -85,9 +89,15 @@ try {
     // ✅ Send the request to RabbitMQ and wait for response
     $response = $client->send_request($likeRequest);
 
+    if (!$response) {
+        error_log("[LIKE] ❌ ERROR: No response from RabbitMQ");
+        echo json_encode(["status" => "error", "message" => "No response from RabbitMQ"]);
+        exit();
+    }
+
     error_log("[LIKE] 📬 Received response from RabbitMQ Broker: " . json_encode($response));
 
-    echo json_encode($response);
+    echo json_encode(["status" => "success", "message" => "Article liked successfully!", "response" => $response]);
 } catch (Exception $e) {
     error_log("[LIKE] ❌ ERROR: RabbitMQ Connection Failed - " . $e->getMessage());
     echo json_encode(["status" => "error", "message" => "Error connecting to RabbitMQ"]);
