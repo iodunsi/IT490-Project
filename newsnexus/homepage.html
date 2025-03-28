@@ -248,6 +248,24 @@
           .catch((error) => console.error("Error fetching news:", error));
       }
 
+      function displayRating(articleId, averageRating) {
+        const stars = document.querySelectorAll(`#rating-${articleId} .star`);
+        stars.forEach((star, index) => {
+          if (index < averageRating) {
+            star.classList.add("active");
+          } else {
+            star.classList.remove("active");
+          }
+        });
+        const ratingText = document.getElementById(
+          `selected-rating-${articleId}`
+        );
+        ratingText.textContent =
+          averageRating > 0
+            ? `Average Rating: ${averageRating.toFixed(1)} stars`
+            : "No ratings yet";
+      }
+
       function likeArticle(articleId, title, url, category) {
         if (!userLoggedIn) {
           alert("Please log in to like articles.");
@@ -259,19 +277,26 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "like",
-            user: sessionStorage.getItem("username"),
+            user: sessionStorage.getItem("username") || "anonymous",
             articleId: articleId,
             title: title,
             url: url,
             category: category || "Uncategorized",
+            timestamp: new Date().toISOString(),
           }),
         })
           .then((response) => response.json())
-          .then((data) => alert(data.message))
+          .then((data) => {
+            if (data.status === "success") {
+              alert("Article liked successfully!");
+            } else {
+              alert("Failed to like article. Try again.");
+            }
+          })
           .catch((error) => console.error("Error liking article:", error));
       }
 
-      function rateArticle(articleId, title, url, rating) {
+      function rateArticle(articleId, title, url, rating, ratingContainerId) {
         if (!userLoggedIn) {
           alert("Please log in to rate articles.");
           return;
@@ -282,15 +307,23 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "rate",
-            user: sessionStorage.getItem("username"),
+            user: sessionStorage.getItem("username") || "anonymous",
             articleId: articleId,
             title: title,
             url: url,
             rating: rating,
+            timestamp: new Date().toISOString(),
           }),
         })
           .then((response) => response.json())
-          .then((data) => alert(`You rated this article ${rating} stars!`))
+          .then((data) => {
+            if (data.status === "success") {
+              alert(`You rated this article ${rating} stars!`);
+              displayRating(articleId, data.averageRating); // Update the stars
+            } else {
+              alert("Failed to rate article. Try again.");
+            }
+          })
           .catch((error) => console.error("Error rating article:", error));
       }
 
