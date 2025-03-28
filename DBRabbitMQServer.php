@@ -97,19 +97,21 @@ function registerUser($data) {
     $stmt->close();
 
     // ✅ Insert new user
-    $stmt = $db->prepare("INSERT INTO users (username, password, first_name, last_name, dob, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
-    if (!$stmt) return ["status" => "error", "message" => "Database error"];
+    // ✅ Insert new user with email
+$stmt = $db->prepare("INSERT INTO users (username, password, first_name, last_name, dob, email, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+if (!$stmt) return ["status" => "error", "message" => "Database error"];
 
-    $stmt->bind_param("sssss", $data['username'], $data['password'], $data['first_name'], $data['last_name'], $data['dob']);
-    if ($stmt->execute()) {
-        $stmt->close();
-        $db->close();
-        return ["status" => "success", "message" => "User registered successfully"];
-    } else {
-        $stmt->close();
-        $db->close();
-        return ["status" => "error", "message" => "User registration failed"];
-    }
+$stmt->bind_param("ssssss", $data['username'], $data['password'], $data['first_name'], $data['last_name'], $data['dob'], $data['email']);
+if ($stmt->execute()) {
+    $stmt->close();
+    $db->close();
+    return ["status" => "success", "message" => "User registered successfully"];
+} else {
+    $stmt->close();
+    $db->close();
+    return ["status" => "error", "message" => "User registration failed"];
+}
+
 }
 
 // ✅ Logout user (clear session key)
