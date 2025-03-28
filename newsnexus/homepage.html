@@ -100,22 +100,34 @@
         background-color: #007bff;
         color: white;
       }
+      .star-rating {
+    display: inline-block;
+    direction: rtl;
+    font-size: 2rem;
+    user-select: none;
+  }
 
-      .star {
-        font-size: 1.5rem;
-        color: gray;
-        cursor: pointer;
-        transition: color 0.2s ease;
-      }
+  .star {
+    color: gray;
+    cursor: pointer;
+    transition: color 0.2s;
+    padding: 0 5px;
+  }
 
-      .star.active {
-        color: gold;
-      }
+  .star:hover,
+  .star.active {
+    color: gold;
+  }
 
-      .star:hover,
-      .star.active:hover {
-        color: orange;
-      }
+  .star-rating:hover .star {
+    color: gray;
+  }
+
+  .star-rating .star.highlighted {
+    color: gold;
+  }
+</style>
+
 
       .rating-text {
         margin-left: 10px;
@@ -184,61 +196,59 @@
                 const newsItem = document.createElement("div");
                 newsItem.className = "row mb-4";
                 newsItem.innerHTML = `
-                                <div class="col-12">
-                                    <div class="card news-card shadow-lg">
-                                        <img src="${
-                                          article.urlToImage ||
-                                          "https://via.placeholder.com/150"
-                                        }" class="card-img-top" alt="News Image">
-                                        <div class="card-body">
-                                            <h5 class="card-title">${
-                                              article.title
-                                            }</h5>
-                                            <p class="card-text">${
-                                              article.description ||
-                                              "No description available"
-                                            }</p>
-                                            <a href="${
-                                              article.url
-                                            }" target="_blank" class="btn btn-primary">Read More</a>
+    <div class="col-12">
+        <div class="card news-card shadow-lg">
+            <img src="${
+              article.urlToImage || "https://via.placeholder.com/150"
+            }" class="card-img-top" alt="News Image">
+            <div class="card-body">
+                <h5 class="card-title">${article.title}</h5>
+                <p class="card-text">${
+                  article.description || "No description available"
+                }</p>
+                <a href="${
+                  article.url
+                }" target="_blank" class="btn btn-primary">Read More</a>
 
-                                            ${
-                                              userLoggedIn
-                                                ? `
-                                                <div class="mt-3">
-                                                    <button class="btn btn-outline-success" onclick="likeArticle('${
-                                                      article.url
-                                                    }', '${article.title}', '${
-                                                    article.url
-                                                  }', '${
-                                                    article.source.name
-                                                  }')">👍 Like</button>
-                                                </div>
+                ${
+                  userLoggedIn
+                    ? `
+                    <div class="mt-3">
+                        <button class="btn btn-outline-success" onclick="likeArticle('${
+                          article.url
+                        }', '${article.title}', '${article.url}', '${
+                        article.source.name
+                      }')">👍 Like</button>
+                    </div>
 
-                                                <div class="rating-section">
-                                                    <label class="fw-bold">Rate this article:</label>
-                                                    <div id="rating-${
-                                                      article.url
-                                                    }">
-                                                        ${[1, 2, 3, 4, 5]
-                                                          .map(
-                                                            (star) => `
-                                                            <button class="rating-button" onclick="rateArticle('${article.url}', '${article.title}', '${article.url}', ${star}, 'rating-${article.url}')">${star} ⭐</button>
-                                                        `
-                                                          )
-                                                          .join("")}
-                                                    </div>
-                                                    <p id="selected-rating-${
-                                                      article.url
-                                                    }" class="selected-rating"></p>
-                                                </div>
-                                                `
-                                                : `<p class="text-danger mt-3">Please log in to like or rate.</p>`
-                                            }
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
+                    <div class="rating-section mt-3">
+                        <label class="fw-bold">Rate this article:</label>
+                        <div id="rating-${article.url}" class="star-rating" 
+                             onmousedown="startRating(event, '${
+                               article.url
+                             }', '${article.title}', '${article.url}')"
+                             onmousemove="dragRating(event, '${article.url}')"
+                             onmouseup="endRating('${article.url}')"
+                             onmouseleave="cancelRating('${article.url}')">
+                            ${[1, 2, 3, 4, 5]
+                              .map(
+                                (star) => `
+                                <span class="star" data-value="${star}">&#9733;</span>
+                              `
+                              )
+                              .join("")}
+                        </div>
+                        <p id="selected-rating-${
+                          article.url
+                        }" class="selected-rating">No ratings yet</p>
+                    </div>
+                    `
+                    : `<p class="text-danger mt-3">Please log in to like or rate.</p>`
+                }
+            </div>
+        </div>
+    </div>`;
+
                 newsContainer.appendChild(newsItem);
               });
             } else {
