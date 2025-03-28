@@ -15,7 +15,7 @@ class RabbitMQConnection {
         if (self::$client === null) {
             error_log("[RABBITMQ] 🔴 Establishing NEW RabbitMQ connection to Broker VM...");
             try {
-                self::$client = new rabbitMQClient("testRabbitMQ.ini", "loginQueue");
+                self::$client = new rabbitMQClient("testRabbitMQ.ini", "newsQueue");
             } catch (Exception $e) {
                 error_log("[RABBITMQ] ❌ ERROR: Could not connect to RabbitMQ Broker - " . $e->getMessage());
                 return null;
@@ -34,14 +34,9 @@ class RabbitMQConnection {
     }
 }
 
-// Sanitize the POST data to remove the password before logging
-$logData = $_POST;
-if (isset($logData['pword'])) {
-    $logData['pword'] = '[REDACTED]';
-}
-
-error_log("[LOGIN] 📩 Request received: " . json_encode($logData));
-
+// Log the received data
+$logData = json_decode(file_get_contents("php://input"), true);
+error_log("[LIKE] 📩 Request received: " . json_encode($logData));
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     echo json_encode(["status" => "error", "message" => "Invalid request method"]);
@@ -49,19 +44,27 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 }
 
 // ✅ Extract and validate input
-$username = isset($_POST['uname']) ? trim($_POST['uname']) : null;
-$password = isset($_POST['pword']) ? trim($_POST['pword']) : null;
+$articleId = isset($logData['articleId']) ? trim($logData['articleId']) : null;
+$title = isset($logData['title']) ? trim($logData['title']) : null;
+$url = isset($logData['url']) ? trim($logData['url']) : null;
+$category = isset($logData['category']) ? trim($logData['category']) : 'Uncategorized';
+$timestamp = isset($logData['timestamp']) ? trim($logData['timestamp']) : null;
+$user = isset($_SESSION['username']) ? $_SESSION['username'] : 'anonymous';
 
-if (empty($username) || empty($password)) {
-    echo json_encode(["status" => "error", "message" => "Please enter both username and password"]);
+if (empty($articleId) || empty($title) || empty($url) || empty($timestamp)) {
+    echo json_encode(["status" => "error", "message" => "Missing required fields"]);
     exit();
 }
 
 // ✅ Prepare RabbitMQ request
 $request = [
-    "type" => "login",
-    "username" => $username,
-    "password" => $password
+    "type" => "like",
+    "user" => $user,
+    "articleId" => $articleId,
+    "title" => $title,
+    "url" => $url,
+    "category" => $category,
+    "timestamp" => $timestamp
 ];
 
 try {
@@ -74,20 +77,14 @@ try {
     // ✅ Send the request and wait for a response
     $response = $client->send_request($request);
 
-    error_log("[LOGIN] 📬 Received response from RabbitMQ Broker: " . json_encode($response));
+    error_log("[LIKE] 📬 Received response from RabbitMQ Broker: " . json_encode($response));
 
     if ($response['status'] === "success") {
-        // ✅ Store session details
-        $_SESSION['username'] = $username;
-        $_SESSION['logged_in'] = true;
-        $_SESSION['session_key'] = $response['session_key'];
-        $_SESSION['expires_at'] = $response['expires_at'];
-
         echo json_encode([
             "status" => "success",
-            "message" => "Login successful",
-            "user_id" => $response['user_id'],
-            "session_key" => $response['session_key']
+            "message" => "Article liked successfully",
+            "article_id" => $response['article_id'],
+            "timestamp" => $response['timestamp']
         ]);
     } else {
         echo json_encode(["status" => "error", "message" => $response['message']]);
@@ -96,7 +93,7 @@ try {
     exit();
 
 } catch (Exception $e) {
-    error_log("[LOGIN] ❌ ERROR: RabbitMQ Connection Failed - " . $e->getMessage());
+    error_log("[LIKE] ❌ ERROR: RabbitMQ Connection Failed - " . $e->getMessage());
     echo json_encode(["status" => "error", "message" => "Error connecting to RabbitMQ"]);
     RabbitMQConnection::closeClient();
     exit();
