@@ -329,7 +329,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "like",
-            user: sessionStorage.getItem("username") || "anonymous",
+            user: sessionStorage.getItem("username"),
             articleId: articleId,
             title: title,
             url: url,
@@ -359,7 +359,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "rate",
-            user: sessionStorage.getItem("username") || "anonymous",
+            user: sessionStorage.getItem("username"),
             articleId: articleId,
             title: title,
             url: url,
