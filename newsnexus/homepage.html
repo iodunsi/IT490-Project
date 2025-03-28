@@ -101,34 +101,31 @@
         color: white;
       }
       .star-rating {
-    display: inline-block;
-    direction: rtl;
-    font-size: 2rem;
-    user-select: none;
-  }
+        display: inline-block;
+        direction: rtl;
+        font-size: 2rem;
+        user-select: none;
+      }
 
-  .star {
-    color: gray;
-    cursor: pointer;
-    transition: color 0.2s;
-    padding: 0 5px;
-  }
+      .star {
+        color: gray;
+        cursor: pointer;
+        transition: color 0.2s;
+        padding: 0 5px;
+      }
 
-  .star:hover,
-  .star.active {
-    color: gold;
-  }
+      .star:hover,
+      .star.active {
+        color: gold;
+      }
 
-  .star-rating:hover .star {
-    color: gray;
-  }
+      .star-rating:hover .star {
+        color: gray;
+      }
 
-  .star-rating .star.highlighted {
-    color: gold;
-  }
-</style>
-
-
+      .star-rating .star.highlighted {
+        color: gold;
+      }
       .rating-text {
         margin-left: 10px;
         font-weight: bold;
@@ -256,6 +253,45 @@
             }
           })
           .catch((error) => console.error("Error fetching news:", error));
+      }
+
+      let currentRating = 0;
+      let ratingInProgress = false;
+
+      function startRating(event, articleId, title, url) {
+        ratingInProgress = true;
+        const stars = document.querySelectorAll(`#rating-${articleId} .star`);
+        const rating = parseInt(event.target.dataset.value);
+        highlightStars(stars, rating);
+        rateArticle(articleId, title, url, rating, `rating-${articleId}`);
+      }
+
+      function dragRating(event, articleId) {
+        if (!ratingInProgress) return;
+        const stars = document.querySelectorAll(`#rating-${articleId} .star`);
+        const star = event.target;
+        if (star.classList.contains("star")) {
+          const rating = parseInt(star.dataset.value);
+          highlightStars(stars, rating);
+        }
+      }
+
+      function endRating(articleId) {
+        ratingInProgress = false;
+      }
+
+      function cancelRating(articleId) {
+        ratingInProgress = false;
+      }
+
+      function highlightStars(stars, rating) {
+        stars.forEach((star, index) => {
+          if (index < rating) {
+            star.classList.add("highlighted");
+          } else {
+            star.classList.remove("highlighted");
+          }
+        });
       }
 
       function displayRating(articleId, averageRating) {
