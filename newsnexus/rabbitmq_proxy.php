@@ -14,6 +14,9 @@ ini_set("session.use_strict_mode", 1);
 
 session_start();
 
+error_log("[LIKE] 🆔 Session ID: " . session_id());
+error_log("[LIKE] 🧑 User from session: " . (isset($_SESSION['username']) ? $_SESSION['username'] : 'not set'));
+
 class RabbitMQConnection {
     private static $client = null;
 
