@@ -143,17 +143,20 @@
             userLoggedIn = data.loggedIn;
 
             if (userLoggedIn) {
+              // Store username in sessionStorage
+              sessionStorage.setItem("username", data.username);
+
               navbarRight.innerHTML = `
-                                  <div class="dropdown">
-                                      <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                          <i class="fas fa-user-circle"></i> ${data.username}
-                                      </button>
-                                      <ul class="dropdown-menu dropdown-menu-end">
-                                          <li><a class="dropdown-item" href="#">Settings</a></li>
-                                          <li><a class="dropdown-item" href="#" onclick="logoutUser()">Logout</a></li>
-                                      </ul>
-                                  </div>
-                              `;
+          <div class="dropdown">
+              <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  <i class="fas fa-user-circle"></i> ${data.username}
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item" href="#">Settings</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="logoutUser()">Logout</a></li>
+              </ul>
+          </div>
+        `;
             } else {
               navbarRight.innerHTML = `<a href="/" class="btn btn-success">Login</a>`;
             }
@@ -324,12 +327,18 @@
           return;
         }
 
+        const username = sessionStorage.getItem("username");
+        if (!username) {
+          alert("Unable to determine username. Please log in.");
+          return;
+        }
+
         fetch("/rabbitmq_proxy.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             type: "like",
-            user: sessionStorage.getItem("username"),
+            user: username,
             articleId: articleId,
             title: title,
             url: url,
