@@ -2,72 +2,71 @@
 require_once('/home/paa39/git/IT490-Project/rabbitMQLib.inc');
 
 header("Content-Type: application/json");
-
 ini_set("log_errors", 1);
 ini_set("error_log", "/var/log/php_errors.log");
 
 session_start();
 
+// 🔧 RabbitMQ Connection Class
 class RabbitMQConnection {
     private static $client = null;
 
     public static function getClient() {
-        if (self::$client === null) {
-            error_log("[RABBITMQ] 🔴 Establishing NEW RabbitMQ connection to Broker VM...");
-            try {
-                self::$client = new rabbitMQClient("/home/paa39/git/IT490-Project/testRabbitMQ.ini", "newsQueue");
-            } catch (Exception $e) {
-                error_log("[RABBITMQ] ❌ ERROR: Could not connect to RabbitMQ Broker - " . $e->getMessage());
-                return null;
-            }
-        } else {
-            error_log("[RABBITMQ] 🟢 Using EXISTING RabbitMQ connection...");
+        if (self::$client !== null) {
+            error_log("[RABBITMQ] 🟢 Using existing connection...");
+            return self::$client;
         }
-        return self::$client;
+
+        error_log("[RABBITMQ] 🔴 Establishing new connection...");
+        try {
+            self::$client = new rabbitMQClient("/home/paa39/git/IT490-Project/testRabbitMQ.ini", "newsQueue");
+            return self::$client;
+        } catch (Exception $e) {
+            error_log("[RABBITMQ] ❌ ERROR: Connection failed - " . $e->getMessage());
+            return null;
+        }
     }
 
     public static function closeClient() {
         if (self::$client !== null) {
-            error_log("[RABBITMQ] 🔴 Closing RabbitMQ connection...");
+            error_log("[RABBITMQ] 🔴 Closing connection...");
             self::$client = null;
         }
     }
 }
 
-// ✅ Capture user "like" request
+// 📝 Helper function to send JSON response
+function jsonResponse($status, $message, $response = null) {
+    echo json_encode(["status" => $status, "message" => $message, "response" => $response]);
+    exit();
+}
+
+// ✅ Validate and extract user input
 $data = file_get_contents("php://input");
 $request = json_decode($data, true);
-
-error_log("[LIKE] 📩 Request received: " . json_encode($request));
-
-if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-    echo json_encode(["status" => "error", "message" => "Invalid request method"]);
-    exit();
-}
-
-// ✅ Ensure user session exists
-if (!isset($_SESSION['username'])) {
-    error_log("[LIKE] ❌ ERROR: User session missing!");
-    echo json_encode(["status" => "error", "message" => "User session not found"]);
-    exit();
-}
-
-$username = $_SESSION['username'];
-
-// ✅ Validate article data
+$username = $_SESSION['username'] ?? null;
 $articleId = $request['articleId'] ?? null;
 $title = $request['title'] ?? null;
 $url = $request['url'] ?? null;
-$category = $request['category'] ?? null;
+$category = $request['category'] ?? "Uncategorized";
 $timestamp = date("Y-m-d H:i:s");
 
-if (!$articleId || !$title || !$url || !$category) {
-    error_log("[LIKE] ❌ ERROR: Invalid article data");
-    echo json_encode(["status" => "error", "message" => "Invalid article data"]);
-    exit();
+error_log("[LIKE] 📩 Request received: " . json_encode($request));
+
+// 🛑 Check request method and user session
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    jsonResponse("error", "Invalid request method");
+}
+if (!$username) {
+    error_log("[LIKE] ❌ ERROR: User session not found");
+    jsonResponse("error", "User session not found");
+}
+if (!$articleId || !$title || !$url) {
+    error_log("[LIKE] ❌ ERROR: Missing article data");
+    jsonResponse("error", "Missing article data");
 }
 
-// ✅ Prepare RabbitMQ request
+// ✅ Prepare RabbitMQ message
 $likeRequest = [
     "type" => "like",
     "user" => $username,
@@ -81,27 +80,20 @@ $likeRequest = [
 try {
     $client = RabbitMQConnection::getClient();
     if (!$client) {
-        error_log("[LIKE] ❌ ERROR: Could not establish RabbitMQ connection");
-        echo json_encode(["status" => "error", "message" => "Could not connect to RabbitMQ"]);
-        exit();
+        jsonResponse("error", "Could not connect to RabbitMQ");
     }
 
-    // ✅ Send the request to RabbitMQ and wait for response
+    // 📤 Send request to RabbitMQ and get the response
     $response = $client->send_request($likeRequest);
-
     if (!$response) {
-        error_log("[LIKE] ❌ ERROR: No response from RabbitMQ");
-        echo json_encode(["status" => "error", "message" => "No response from RabbitMQ"]);
-        exit();
+        jsonResponse("error", "No response from RabbitMQ");
     }
 
-    error_log("[LIKE] 📬 Received response from RabbitMQ Broker: " . json_encode($response));
-
-    echo json_encode(["status" => "success", "message" => "Article liked successfully!", "response" => $response]);
+    error_log("[LIKE] 📬 Response received: " . json_encode($response));
+    jsonResponse("success", "Article liked successfully!", $response);
 } catch (Exception $e) {
-    error_log("[LIKE] ❌ ERROR: RabbitMQ Connection Failed - " . $e->getMessage());
-    echo json_encode(["status" => "error", "message" => "Error connecting to RabbitMQ"]);
+    error_log("[LIKE] ❌ ERROR: Connection failed - " . $e->getMessage());
     RabbitMQConnection::closeClient();
-    exit();
+    jsonResponse("error", "Error connecting to RabbitMQ");
 }
 ?>
