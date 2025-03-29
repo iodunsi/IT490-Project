@@ -60,6 +60,7 @@ function requestProcessor($request) {
         "register" => registerUser($request),
         "logout" => logoutUser($request),
         "like" => likeArticle($request),
+        "rate" => rateArticle($request),
         default => ["status" => "error", "message" => "Unknown request type"]
     };
 }
