@@ -363,7 +363,7 @@
           return;
         }
 
-        fetch("/rabbitmq_proxy.php", {
+        fetch("/rating.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -380,7 +380,7 @@
           .then((data) => {
             if (data.status === "success") {
               alert(`You rated this article ${rating} stars!`);
-              displayRating(articleId, data.averageRating); // Update the stars
+              displayRating(articleId, rating); // Update the stars
             } else {
               alert("Failed to rate article. Try again.");
             }
