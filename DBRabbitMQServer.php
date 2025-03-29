@@ -160,17 +160,49 @@ function rateArticle($request) {
     $db = getDatabaseConnection();
     if (!$db) return ["status" => "error", "message" => "Database connection failed"];
 
-    // Insert the rating record
-    $stmt = $db->prepare("INSERT INTO ratings (user_id, article_id, title, url, rating, rated_at) VALUES (?, ?, ?, ?, ?, NOW())");
-    if (!$stmt) return ["status" => "error", "message" => "Database error"];
+    // Get user ID based on username
+    $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
+    if (!$stmt) {
+        error_log("Database error while preparing user lookup: " . $db->error);
+        return ["status" => "error", "message" => "Database error"];
+    }
 
-    $stmt->bind_param("isssi", $request['user'], $request['articleId'], $request['title'], $request['url'], $request['rating']);
+    $stmt->bind_param("s", $request['user']);
     $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows === 0) {
+        $stmt->close();
+        $db->close();
+        error_log("User not found: " . $request['user']);
+        return ["status" => "error", "message" => "User not found"];
+    }
+
+    $stmt->bind_result($userId);
+    $stmt->fetch();
+    $stmt->close();
+
+    // Insert rating
+    $stmt = $db->prepare("INSERT INTO ratings (user_id, article_id, title, url, rating, rated_at) VALUES (?, ?, ?, ?, ?, NOW())");
+    if (!$stmt) {
+        error_log("Database error while preparing insert: " . $db->error);
+        return ["status" => "error", "message" => "Database error"];
+    }
+
+    $stmt->bind_param("isssi", $userId, $request['articleId'], $request['title'], $request['url'], $request['rating']);
+    if (!$stmt->execute()) {
+        error_log("Database error while executing insert: " . $stmt->error);
+        $stmt->close();
+        $db->close();
+        return ["status" => "error", "message" => "Error inserting rating"];
+    }
+
     $stmt->close();
     $db->close();
 
     return ["status" => "success", "message" => "Article rated successfully"];
 }
+
 
 
 // ✅ Like an article
