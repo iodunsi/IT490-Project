@@ -155,6 +155,23 @@ function logoutUser($data) {
     return ["status" => "success", "message" => "User logged out successfully"];
 }
 
+function rateArticle($request) {
+    $db = getDatabaseConnection();
+    if (!$db) return ["status" => "error", "message" => "Database connection failed"];
+
+    // Insert the rating record
+    $stmt = $db->prepare("INSERT INTO ratings (user_id, article_id, title, url, rating, rated_at) VALUES (?, ?, ?, ?, ?, NOW())");
+    if (!$stmt) return ["status" => "error", "message" => "Database error"];
+
+    $stmt->bind_param("isssi", $request['user'], $request['articleId'], $request['title'], $request['url'], $request['rating']);
+    $stmt->execute();
+    $stmt->close();
+    $db->close();
+
+    return ["status" => "success", "message" => "Article rated successfully"];
+}
+
+
 // ✅ Like an article
 function likeArticle($request) {
     $db = getDatabaseConnection();
