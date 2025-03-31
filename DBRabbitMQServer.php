@@ -200,7 +200,13 @@ function rateArticle($request) {
     }
 
     $db->close();
-    return ["status" => "success", "message" => "Article rated successfully"];
+    return [
+    "status" => "success",
+    "message" => "Article rated successfully",
+    "article_id" => $request['articleId'],
+    "timestamp" => date("c")
+];
+
 }
 
 
