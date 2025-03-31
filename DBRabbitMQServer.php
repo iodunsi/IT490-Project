@@ -61,6 +61,7 @@ function requestProcessor($request) {
         "logout" => logoutUser($request),
         "like" => likeArticle($request),
         "rate" => rateArticle($request),
+        "get_average_rating" => getAverageRating($request),
         default => ["status" => "error", "message" => "Unknown request type"]
     };
 }
@@ -203,6 +204,23 @@ function rateArticle($request) {
     return ["status" => "success", "message" => "Article rated successfully"];
 }
 
+function getAverageRating($request) {
+    $db = getDatabaseConnection();
+    if (!$db) return ["status" => "error", "message" => "Database connection failed"];
+
+    $stmt = $db->prepare("SELECT AVG(rating) AS avg_rating FROM ratings WHERE article_id = ?");
+    $stmt->bind_param("s", $request['articleId']);
+    $stmt->execute();
+    $stmt->bind_result($average);
+    $stmt->fetch();
+    $stmt->close();
+    $db->close();
+
+    return [
+        "status" => "success",
+        "averageRating" => round($average, 1)
+    ];
+}
 
 
 // ✅ Like an article
