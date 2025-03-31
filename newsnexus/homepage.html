@@ -252,6 +252,15 @@
                           : `<p class="text-danger mt-3">Please log in to like or rate.</p>`
                       }
                   </div>
+                  <div class="comment-section mt-3">
+                    <label class="fw-bold">Comments:</label>
+                    <div id="comments-${sanitizedId}" class="comments-container"></div>
+                    <textarea id="comment-input-${sanitizedId}" class="form-control mt-2" rows="2" placeholder="Write a comment..."></textarea>
+                    <button class="btn btn-sm btn-primary mt-1" onclick="submitComment('${sanitizedId}', '${
+                  article.url
+                }', '${article.title}')">Post</button>
+                  </div>
+
               </div>
           </div>`;
 
