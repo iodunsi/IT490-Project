@@ -256,6 +256,21 @@
           </div>`;
 
                 newsContainer.appendChild(newsItem);
+                fetch("/get_average_rating.php", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ articleId: article.url }),
+                })
+                  .then((res) => res.json())
+                  .then((data) => {
+                    if (data.status === "success") {
+                      const sanitizedId = sanitizeUrlForId(article.url);
+                      displayRating(sanitizedId, data.averageRating);
+                    }
+                  })
+                  .catch((err) => {
+                    console.error("Error fetching average rating:", err);
+                  });
               });
             } else {
               newsContainer.innerHTML = `<p>No articles found for "${query}".</p>`;
