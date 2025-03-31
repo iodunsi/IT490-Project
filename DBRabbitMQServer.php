@@ -200,20 +200,20 @@ function rateArticle($request) {
     }
 
     $stmt = $db->prepare("SELECT AVG(rating) FROM ratings WHERE article_id = ?");
-$stmt->bind_param("s", $request['articleId']);
-$stmt->execute();
-$stmt->bind_result($avgRating);
-$stmt->fetch();
-$stmt->close();
+    $stmt->bind_param("s", $request['articleId']);
+    $stmt->execute();
+    $stmt->bind_result($avgRating);
+    $stmt->fetch();
+    $stmt->close();
 
     $db->close();
     return [
-  "status" => "success",
-  "message" => "Article rated successfully",
-  "article_id" => $request['articleId'],
-  "timestamp" => date("c"),
-  "averageRating" => round($avgRating, 1)
-];
+        "status" => "success",
+        "message" => "Article rated successfully",
+        "article_id" => $request['articleId'],
+        "timestamp" => date("c"),
+        "averageRating" => round($avgRating, 1)
+        ];
 
 }
 
@@ -263,6 +263,19 @@ function likeArticle($request) {
     // Bind the result to the user ID variable
     $stmt->bind_result($userId);
     $stmt->fetch();
+    $stmt->close();
+
+    $stmt = $db->prepare("SELECT id FROM likes WHERE user_id = ? AND article_id = ?");
+    
+    $stmt->bind_param("is", $userId, $request['articleId']);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        $stmt->close();
+        $db->close();
+        return ["status" => "success", "message" => "Article already liked"];
+    }
     $stmt->close();
 
     // Insert the like record
