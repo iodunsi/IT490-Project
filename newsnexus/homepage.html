@@ -259,7 +259,9 @@
                 fetch("/get_average_rating.php", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ articleId: article.url }),
+                  body: JSON.stringify({
+                    articleId: sanitizeUrlForId(article.url),
+                  }),
                 })
                   .then((res) => res.json())
                   .then((data) => {
