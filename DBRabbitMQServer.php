@@ -199,12 +199,20 @@ function rateArticle($request) {
         $stmt->close();
     }
 
+    $stmt = $db->prepare("SELECT AVG(rating) FROM ratings WHERE article_id = ?");
+$stmt->bind_param("s", $request['articleId']);
+$stmt->execute();
+$stmt->bind_result($avgRating);
+$stmt->fetch();
+$stmt->close();
+
     $db->close();
     return [
-    "status" => "success",
-    "message" => "Article rated successfully",
-    "article_id" => $request['articleId'],
-    "timestamp" => date("c")
+  "status" => "success",
+  "message" => "Article rated successfully",
+  "article_id" => $request['articleId'],
+  "timestamp" => date("c"),
+  "averageRating" => round($avgRating, 1)
 ];
 
 }
