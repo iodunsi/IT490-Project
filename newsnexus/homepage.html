@@ -315,10 +315,9 @@
         const ratingText = document.getElementById(
           `selected-rating-${articleId}`
         );
-        ratingText.textContent =
-          averageRating > 0
-            ? `Average Rating: ${averageRating.toFixed(1)} stars`
-            : "No ratings yet";
+        ratingText.textContent = averageRating
+          ? `Average Rating: ${averageRating.toFixed(1)} stars`
+          : "No ratings yet";
       }
 
       function likeArticle(articleId, title, url, category) {
