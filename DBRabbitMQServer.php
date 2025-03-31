@@ -161,13 +161,8 @@ function rateArticle($request) {
     $db = getDatabaseConnection();
     if (!$db) return ["status" => "error", "message" => "Database connection failed"];
 
-    // Get user ID based on username
+    // Get user ID
     $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
-    if (!$stmt) {
-        error_log("Database error while preparing user lookup: " . $db->error);
-        return ["status" => "error", "message" => "Database error"];
-    }
-
     $stmt->bind_param("s", $request['user']);
     $stmt->execute();
     $stmt->store_result();
@@ -175,7 +170,6 @@ function rateArticle($request) {
     if ($stmt->num_rows === 0) {
         $stmt->close();
         $db->close();
-        error_log("User not found: " . $request['user']);
         return ["status" => "error", "message" => "User not found"];
     }
 
@@ -183,26 +177,32 @@ function rateArticle($request) {
     $stmt->fetch();
     $stmt->close();
 
-    // Insert rating
-    $stmt = $db->prepare("INSERT INTO ratings (user_id, article_id, title, url, rating, rated_at) VALUES (?, ?, ?, ?, ?, NOW())");
-    if (!$stmt) {
-        error_log("Database error while preparing insert: " . $db->error);
-        return ["status" => "error", "message" => "Database error"];
-    }
+    // Check if rating exists
+    $stmt = $db->prepare("SELECT id FROM ratings WHERE user_id = ? AND article_id = ?");
+    $stmt->bind_param("is", $userId, $request['articleId']);
+    $stmt->execute();
+    $stmt->store_result();
 
-    $stmt->bind_param("isssi", $userId, $request['articleId'], $request['title'], $request['url'], $request['rating']);
-    if (!$stmt->execute()) {
-        error_log("Database error while executing insert: " . $stmt->error);
+    if ($stmt->num_rows > 0) {
+        // Update existing rating
         $stmt->close();
-        $db->close();
-        return ["status" => "error", "message" => "Error inserting rating"];
+        $stmt = $db->prepare("UPDATE ratings SET rating = ?, rated_at = NOW() WHERE user_id = ? AND article_id = ?");
+        $stmt->bind_param("iis", $request['rating'], $userId, $request['articleId']);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        // Insert new rating
+        $stmt->close();
+        $stmt = $db->prepare("INSERT INTO ratings (user_id, article_id, title, url, rating, rated_at) VALUES (?, ?, ?, ?, ?, NOW())");
+        $stmt->bind_param("isssi", $userId, $request['articleId'], $request['title'], $request['url'], $request['rating']);
+        $stmt->execute();
+        $stmt->close();
     }
 
-    $stmt->close();
     $db->close();
-
     return ["status" => "success", "message" => "Article rated successfully"];
 }
+
 
 function getAverageRating($request) {
     $db = getDatabaseConnection();
