@@ -2,7 +2,7 @@
 require_once( __DIR__ .'/../rabbitMQLib.inc');
 
 
-$client = new rabbitMQClient("testRabbitMQ.ini", "registerQueue");
+$client = new rabbitMQClient('/../testRabbitMQ.ini', "registerQueue");
 
   $request = [
         "type" => "register",
