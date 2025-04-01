@@ -1,6 +1,5 @@
 <?php
 require_once( __DIR__ .'/../rabbitMQLib.inc');
-require_once( __DIR__ .'/../mysqlconnect.php');
 
 
 $client = new rabbitMQClient("testRabbitMQ.ini", "registerQueue");
