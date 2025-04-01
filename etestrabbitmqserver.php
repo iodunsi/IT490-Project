@@ -121,25 +121,21 @@ function registerUser($data) {
 // ✅ Send Welcome Email via RabbitMQ
 function sendWelcomeEmail($email, $first_name) {
     require_once('rabbitMQLib.inc');
-
     try {
         $client = new rabbitMQClient("emailRabbitMQ.ini", "emailQueue");
         $request = [
             "type" => "send_email",
             "to" => $email,
             "subject" => "Welcome to IT490 Project!",
-            "message" => "Hello $first_name, <br><br> 
-                          Thank you for registering! We’re excited to have you on board. <br><br> 
-                          Regards, <br> 
-                          IT490 Team"
+            "message" => "Hello $first_name, <br><br>Thank you for registering! We’re excited to have you on board. <br><br>Regards, <br>IT490 Team"
         ];
-        
+        error_log("[DEBUG] Sending email request: " . json_encode($request) . "\n", 3, "/var/log/rabbitmq_errors.log");
         $response = $client->send_request($request);
-
+        error_log("[DEBUG] Email response: " . json_encode($response) . "\n", 3, "/var/log/rabbitmq_errors.log");
         if ($response && $response['status'] === "success") {
             return ["status" => "success", "message" => "User registered and email sent"];
         } else {
-            return ["status" => "error", "message" => "User registered, but email failed"];
+            return ["status" => "error", "message" => "User registered, but email failed: " . json_encode($response)];
         }
     } catch (Exception $e) {
         return ["status" => "error", "message" => "User registered, but email request failed: " . $e->getMessage()];
