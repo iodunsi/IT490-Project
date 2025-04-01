@@ -419,6 +419,78 @@
           .catch((error) => console.error("Error rating article:", error));
       }
 
+      function submitComment(articleId, url, title) {
+        const commentText = document
+          .getElementById(`comment-input-${articleId}`)
+          .value.trim();
+        const username = sessionStorage.getItem("username");
+
+        if (!commentText) return alert("Comment cannot be empty.");
+        if (!username) return alert("You must be logged in to comment.");
+
+        fetch("/comment.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "comment",
+            user: username,
+            articleId: url,
+            title: title,
+            comment: commentText,
+            timestamp: new Date().toISOString(),
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.status === "success") {
+              document.getElementById(`comment-input-${articleId}`).value = "";
+              loadComments(articleId, url);
+            } else {
+              alert("Error posting comment.");
+            }
+          });
+      }
+
+      function loadComments(articleId, articleUrl) {
+        fetch("/get_comments.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ articleId: articleUrl }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.status === "success") {
+              const container = document.getElementById(
+                `comments-${articleId}`
+              );
+              const allComments = data.comments;
+              const visible = allComments.slice(0, 2);
+              container.innerHTML = visible
+                .map(
+                  (c) => `<div><strong>${c.user}:</strong> ${c.comment}</div>`
+                )
+                .join("");
+
+              if (allComments.length > 2) {
+                container.innerHTML += `<a href="#" onclick="toggleComments('${articleId}', ${JSON.stringify(
+                  allComments
+                ).replace(/"/g, "&quot;")}); return false;">Show More</a>`;
+              }
+            }
+          });
+      }
+
+      function toggleComments(articleId, allComments) {
+        const container = document.getElementById(`comments-${articleId}`);
+        container.innerHTML =
+          allComments
+            .map((c) => `<div><strong>${c.user}:</strong> ${c.comment}</div>`)
+            .join("") +
+          `<a href="#" onclick="loadComments('${articleId}', '${atob(
+            articleId.replace(/-/g, "+").replace(/_/g, "/")
+          )}'); return false;">Show Less</a>`;
+      }
+
       document.addEventListener("DOMContentLoaded", checkSession);
       window.onload = checkSession;
     </script>
