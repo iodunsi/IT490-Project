@@ -62,6 +62,9 @@ function requestProcessor($request) {
         "like" => likeArticle($request),
         "rate" => rateArticle($request),
         "get_average_rating" => getAverageRating($request),
+        "comment" => saveComment($request),
+        "get_comments" => fetchComments($request),
+
         default => ["status" => "error", "message" => "Unknown request type"]
     };
 }
@@ -298,6 +301,42 @@ function likeArticle($request) {
 
     return ["status" => "success", "message" => "Article liked successfully"];
 }
+
+function saveComment($request) {
+    $db = getDatabaseConnection();
+    $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
+    $stmt->bind_param("s", $request['user']);
+    $stmt->execute();
+    $stmt->bind_result($userId);
+    $stmt->fetch();
+    $stmt->close();
+
+    $stmt = $db->prepare("INSERT INTO comments (user_id, article_id, title, comment, created_at) VALUES (?, ?, ?, ?, NOW())");
+    $stmt->bind_param("isss", $userId, $request['articleId'], $request['title'], $request['comment']);
+    $stmt->execute();
+    $stmt->close();
+    $db->close();
+
+    return ["status" => "success", "message" => "Comment saved"];
+}
+
+function fetchComments($request) {
+    $db = getDatabaseConnection();
+    $stmt = $db->prepare("SELECT u.username, c.comment FROM comments c JOIN users u ON c.user_id = u.id WHERE c.article_id = ? ORDER BY c.created_at DESC");
+    $stmt->bind_param("s", $request['articleId']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $comments = [];
+    while ($row = $result->fetch_assoc()) {
+        $comments[] = ["user" => $row['username'], "comment" => $row['comment']];
+    }
+
+    $stmt->close();
+    $db->close();
+    return ["status" => "success", "comments" => $comments];
+}
+
 
 // ✅ Server startup
 echo "[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n";
