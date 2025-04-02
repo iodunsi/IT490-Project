@@ -4,6 +4,10 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('mysqlconnect.php');
+require '/path/to/vendor/autoload.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 ini_set("log_errors", 1);
 ini_set("error_log", "/var/log/rabbitmq_errors.log");
@@ -337,9 +341,6 @@ function fetchComments($request) {
     $db->close();
     return ["status" => "success", "comments" => $comments];
 }
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
 
 function shareArticle($request) {
     $db = getDatabaseConnection();
