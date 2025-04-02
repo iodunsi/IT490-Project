@@ -514,15 +514,55 @@
           });
       }
 
-      function toggleComments(articleId, allComments) {
+      function toggleComments(articleId, allComments, showAll = true) {
         const container = document.getElementById(`comments-${articleId}`);
-        container.innerHTML =
-          allComments
-            .map((c) => `<div><strong>${c.user}:</strong> ${c.comment}</div>`)
-            .join("") +
-          `<a href="#" onclick="loadComments('${articleId}', '${atob(
-            articleId.replace(/-/g, "+").replace(/_/g, "/")
-          )}'); return false;">Show Less</a>`;
+
+        if (showAll) {
+          container.innerHTML =
+            allComments
+              .map(
+                (c) => `
+          <div class="comment-box">
+            <div class="comment-user">${c.user}</div>
+            <div class="comment-text">${c.comment}</div>
+            ${
+              c.timestamp
+                ? `<div class="comment-meta">${new Date(
+                    c.timestamp
+                  ).toLocaleString()}</div>`
+                : ""
+            }
+          </div>
+        `
+              )
+              .join("") +
+            `<a href="#" onclick="toggleComments('${articleId}', ${JSON.stringify(
+              allComments
+            ).replace(/"/g, "&quot;")}, false); return false;">Show Less</a>`;
+        } else {
+          const visible = allComments.slice(0, 2);
+          container.innerHTML =
+            visible
+              .map(
+                (c) => `
+          <div class="comment-box">
+            <div class="comment-user">${c.user}</div>
+            <div class="comment-text">${c.comment}</div>
+            ${
+              c.timestamp
+                ? `<div class="comment-meta">${new Date(
+                    c.timestamp
+                  ).toLocaleString()}</div>`
+                : ""
+            }
+          </div>
+        `
+              )
+              .join("") +
+            `<a href="#" onclick="toggleComments('${articleId}', ${JSON.stringify(
+              allComments
+            ).replace(/"/g, "&quot;")}, true); return false;">Show More</a>`;
+        }
       }
 
       document.addEventListener("DOMContentLoaded", checkSession);
