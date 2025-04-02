@@ -363,6 +363,9 @@ function shareArticle($request) {
 
     try {
         $mail = new PHPMailer(true);
+        $mail->CharSet = 'UTF-8';
+        $mail->Encoding = 'base64';
+
         // Server settings
         $mail->isSMTP();
         $mail->Host = 'smtp.gmail.com';
