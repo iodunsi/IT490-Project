@@ -363,6 +363,7 @@ function shareArticle($request) {
 
     try {
         $mail = new PHPMailer(true);
+        $mail->isHTML(true);
         $mail->CharSet = 'UTF-8';
         $mail->Encoding = 'base64';
 
@@ -388,6 +389,8 @@ function shareArticle($request) {
             <p><a href=\"{$request['url']}\">Read Article</a></p>
             <p><em>Shared via News Nexus</em></p>
         ";
+
+        $mail->AltBody = "{$request['from_user']} shared an article: {$request['url']}";
 
         $mail->send();
         return ["status" => "success", "message" => "Article shared successfully"];
