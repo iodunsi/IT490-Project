@@ -363,7 +363,6 @@ function shareArticle($request) {
 
     try {
         $mail = new PHPMailer(true);
-        $mail->isHTML(true);
         $mail->CharSet = 'UTF-8';
         $mail->Encoding = 'base64';
 
@@ -379,6 +378,7 @@ function shareArticle($request) {
         // Sender & Recipient
         $mail->setFrom(getenv("EMAIL_USER"), 'News Nexus');
         $mail->addAddress($recipientEmail);
+        $mail->addReplyTo(getenv("EMAIL_USER"), 'News Nexus');
 
         // Email content
         $mail->isHTML(true);
