@@ -307,12 +307,6 @@
                 })
                   .then((res) => res.json())
                   .then((data) => {
-                    console.log(
-                      "Average rating for",
-                      article.url,
-                      "=>",
-                      data.averageRating
-                    );
                     if (data.status === "success") {
                       const sanitizedId = sanitizeUrlForId(article.url);
                       displayRating(sanitizedId, data.averageRating);
