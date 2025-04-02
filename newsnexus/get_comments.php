@@ -2,6 +2,9 @@
 require_once('/home/paa39/git/IT490-Project/rabbitMQLib.inc');
 header("Content-Type: application/json");
 
+error_reporting(0);
+ini_set('display_errors', 0);
+
 $data = json_decode(file_get_contents("php://input"), true);
 
 $request = [
