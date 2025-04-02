@@ -310,7 +310,6 @@
                     if (data.status === "success") {
                       const sanitizedId = sanitizeUrlForId(article.url);
                       displayRating(sanitizedId, data.averageRating);
-                      loadComments(sanitizedId, article.url);
                     }
                   })
                   .catch((err) => {
