@@ -293,7 +293,15 @@
                   article.url
                 }', '${article.title}')">Post</button>
                   </div>
-
+                  <div class="share-section mt-3">
+                  <label class="fw-bold">Share with a user:</label>
+                  <div class="input-group">
+                    <input type="text" id="share-user-${sanitizedId}" class="form-control" placeholder="Enter username">
+                    <button class="btn btn-outline-primary" onclick="shareArticle('${sanitizedId}', '${
+                  article.url
+                }')">Share</button>
+                  </div>
+                </div>
               </div>
           </div>`;
 
