@@ -4,7 +4,7 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('mysqlconnect.php');
-require '/path/to/vendor/autoload.php';
+require('/home/paa39/git/IT490-Project/vendor/autoload.php');
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -365,10 +365,10 @@ function shareArticle($request) {
         $mail = new PHPMailer(true);
         // Server settings
         $mail->isSMTP();
-        $mail->Host = 'smtp.example.com';   // replace with your SMTP server
+        $mail->Host = 'smtp.example.com';
         $mail->SMTPAuth = true;
-        $mail->Username = 'your_email@example.com'; // SMTP username
-        $mail->Password = 'your_email_password';    // SMTP password
+        $mail->Username = getenv("EMAIL_USER");
+        $mail->Password = getenv("EMAIL_PASS"); 
         $mail->SMTPSecure = 'tls';
         $mail->Port = 587;
 
