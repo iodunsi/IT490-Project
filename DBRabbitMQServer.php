@@ -64,6 +64,7 @@ function requestProcessor($request) {
         "get_average_rating" => getAverageRating($request),
         "comment" => saveComment($request),
         "get_comments" => fetchComments($request),
+        "share" => shareArticle($request),
 
         default => ["status" => "error", "message" => "Unknown request type"]
     };
@@ -335,6 +336,61 @@ function fetchComments($request) {
     $stmt->close();
     $db->close();
     return ["status" => "success", "comments" => $comments];
+}
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+function shareArticle($request) {
+    $db = getDatabaseConnection();
+    if (!$db) {
+        return ["status" => "error", "message" => "Database connection failed"];
+    }
+
+    $stmt = $db->prepare("SELECT email FROM users WHERE username = ?");
+    $stmt->bind_param("s", $request['to_user']);
+    $stmt->execute();
+    $stmt->bind_result($recipientEmail);
+    
+    if (!$stmt->fetch()) {
+        $stmt->close();
+        $db->close();
+        return ["status" => "error", "message" => "Recipient not found"];
+    }
+    $stmt->close();
+    $db->close();
+
+    try {
+        $mail = new PHPMailer(true);
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host = 'smtp.example.com';   // replace with your SMTP server
+        $mail->SMTPAuth = true;
+        $mail->Username = 'your_email@example.com'; // SMTP username
+        $mail->Password = 'your_email_password';    // SMTP password
+        $mail->SMTPSecure = 'tls';
+        $mail->Port = 587;
+
+        // Sender & Recipient
+        $mail->setFrom('your_email@example.com', 'News Nexus');
+        $mail->addAddress($recipientEmail);
+
+        // Email content
+        $mail->isHTML(true);
+        $mail->Subject = "{$request['from_user']} shared an article with you!";
+        $mail->Body = "
+            <h3>{$request['from_user']} thinks you'll like this:</h3>
+            <p><strong>{$request['title']}</strong></p>
+            <p><a href=\"{$request['url']}\">Read Article</a></p>
+            <p><em>Shared via News Nexus</em></p>
+        ";
+
+        $mail->send();
+        return ["status" => "success", "message" => "Article shared successfully"];
+    } catch (Exception $e) {
+        error_log("[SHARE ERROR] ❌ PHPMailer error: " . $mail->ErrorInfo);
+        return ["status" => "error", "message" => "Failed to send email"];
+    }
 }
 
 
