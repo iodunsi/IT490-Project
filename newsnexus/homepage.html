@@ -558,6 +558,36 @@
         }
       }
 
+      function shareArticle(articleId, url) {
+        const username = sessionStorage.getItem("username");
+        const recipient = document
+          .getElementById(`share-user-${articleId}`)
+          .value.trim();
+
+        if (!recipient) {
+          alert("Please enter a username to share with.");
+          return;
+        }
+
+        fetch("/share_article.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sender: username,
+            recipient: recipient,
+            url: url,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            alert(data.message);
+          })
+          .catch((err) => {
+            console.error("Error sharing article:", err);
+            alert("Failed to share article.");
+          });
+      }
+
       document.addEventListener("DOMContentLoaded", checkSession);
       window.onload = checkSession;
     </script>
