@@ -296,10 +296,13 @@
                   <div class="share-section mt-3">
                   <label class="fw-bold">Share with a user:</label>
                   <div class="input-group">
-                    <input type="text" id="share-user-${sanitizedId}" class="form-control" placeholder="Enter username">
-                    <button class="btn btn-outline-primary" onclick="shareArticle('${sanitizedId}', '${
+                    <button class="btn btn-outline-secondary mt-2" onclick="shareArticle('${
+                      article.url
+                    }', '${article.title.replace(/'/g, "\\'")}', '${
                   article.url
-                }')">Share</button>
+                }')">
+                    📤 Share
+                  </button>
                   </div>
                 </div>
               </div>
