@@ -130,39 +130,6 @@
         font-weight: bold;
         color: #555;
       }
-      .comments-container {
-        margin-top: 10px;
-        border-top: 1px solid #ddd;
-        padding-top: 10px;
-        max-height: 250px;
-        overflow-y: auto;
-      }
-
-      .comment-box {
-        background-color: #f8f9fa;
-        padding: 10px 15px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        border-left: 3px solid #007bff;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      }
-
-      .comment-user {
-        font-weight: 600;
-        color: #007bff;
-      }
-
-      .comment-text {
-        margin-top: 4px;
-        color: #333;
-        line-height: 1.4;
-      }
-
-      .comment-meta {
-        font-size: 0.85rem;
-        color: #888;
-        margin-top: 3px;
-      }
     </style>
 
     <script>
@@ -293,17 +260,7 @@
                   article.url
                 }', '${article.title}')">Post</button>
                   </div>
-                  <div class="share-section mt-3">
-                  <div class="input-group">
-                    <button class="btn btn-outline-secondary mt-2" onclick="shareArticle('${
-                      article.url
-                    }', '${article.title.replace(/'/g, "\\'")}', '${
-                  article.url
-                }')">
-                    📤 Share
-                  </button>
-                  </div>
-                </div>
+
               </div>
           </div>`;
 
@@ -317,6 +274,12 @@
                 })
                   .then((res) => res.json())
                   .then((data) => {
+                    console.log(
+                      "Average rating for",
+                      article.url,
+                      "=>",
+                      data.averageRating
+                    );
                     if (data.status === "success") {
                       const sanitizedId = sanitizeUrlForId(article.url);
                       displayRating(sanitizedId, data.averageRating);
@@ -456,148 +419,6 @@
           .catch((error) => console.error("Error rating article:", error));
       }
 
-      function submitComment(articleId, url, title) {
-        const commentText = document
-          .getElementById(`comment-input-${articleId}`)
-          .value.trim();
-        const username = sessionStorage.getItem("username");
-
-        if (!commentText) return alert("Comment cannot be empty.");
-        if (!username) return alert("You must be logged in to comment.");
-
-        fetch("/comment.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "comment",
-            user: username,
-            articleId: url,
-            title: title,
-            comment: commentText,
-            timestamp: new Date().toISOString(),
-          }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.status === "success") {
-              document.getElementById(`comment-input-${articleId}`).value = "";
-              loadComments(articleId, url);
-            } else {
-              alert("Error posting comment.");
-            }
-          });
-      }
-
-      function loadComments(articleId, articleUrl) {
-        fetch("/get_comments.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ articleId: articleUrl }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.status === "success") {
-              const container = document.getElementById(
-                `comments-${articleId}`
-              );
-              const allComments = data.comments;
-              const visible = allComments.slice(0, 2);
-              container.innerHTML = visible
-                .map(
-                  (c) => `<div><strong>${c.user}:</strong> ${c.comment}</div>`
-                )
-                .join("");
-
-              if (allComments.length > 2) {
-                container.innerHTML += `<a href="#" onclick="toggleComments('${articleId}', ${JSON.stringify(
-                  allComments
-                ).replace(/"/g, "&quot;")}); return false;">Show More</a>`;
-              }
-            }
-          });
-      }
-
-      function toggleComments(articleId, allComments, showAll = true) {
-        const container = document.getElementById(`comments-${articleId}`);
-
-        if (showAll) {
-          container.innerHTML =
-            allComments
-              .map(
-                (c) => `
-          <div class="comment-box">
-            <div class="comment-user">${c.user}</div>
-            <div class="comment-text">${c.comment}</div>
-            ${
-              c.timestamp
-                ? `<div class="comment-meta">${new Date(
-                    c.timestamp
-                  ).toLocaleString()}</div>`
-                : ""
-            }
-          </div>
-        `
-              )
-              .join("") +
-            `<a href="#" onclick="toggleComments('${articleId}', ${JSON.stringify(
-              allComments
-            ).replace(/"/g, "&quot;")}, false); return false;">Show Less</a>`;
-        } else {
-          const visible = allComments.slice(0, 2);
-          container.innerHTML =
-            visible
-              .map(
-                (c) => `
-          <div class="comment-box">
-            <div class="comment-user">${c.user}</div>
-            <div class="comment-text">${c.comment}</div>
-            ${
-              c.timestamp
-                ? `<div class="comment-meta">${new Date(
-                    c.timestamp
-                  ).toLocaleString()}</div>`
-                : ""
-            }
-          </div>
-        `
-              )
-              .join("") +
-            `<a href="#" onclick="toggleComments('${articleId}', ${JSON.stringify(
-              allComments
-            ).replace(/"/g, "&quot;")}, true); return false;">Show More</a>`;
-        }
-      }
-
-      function shareArticle(articleId, title, url) {
-        const toUser = prompt(
-          "Enter the username of the person you want to share this with:"
-        );
-        if (!toUser) return;
-
-        fetch("/share_article.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to_user: toUser,
-            articleId: articleId,
-            title: title,
-            url: url,
-            timestamp: new Date().toISOString(),
-          }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.status === "success") {
-              alert("Article shared successfully!");
-            } else {
-              alert("Failed to share article: " + data.message);
-            }
-          })
-          .catch((err) => {
-            console.error("Error sharing article:", err);
-          });
-      }
-
       document.addEventListener("DOMContentLoaded", checkSession);
       window.onload = checkSession;
     </script>
@@ -631,19 +452,6 @@
         <p class="hero-subtitle">Your Gateway to Trusted, Personalized News</p>
       </div>
     </header>
-
-    <div class="container search-section">
-      <h3>Search for News</h3>
-      <input
-        id="search-query"
-        type="text"
-        class="search-bar"
-        placeholder="e.g. AI advancements, climate change, space exploration..."
-      />
-      <button class="btn btn-primary search-btn" onclick="fetchNews()">
-        Search
-      </button>
-    </div>
 
     <div class="container container-news">
       <div class="row mt-3" id="newsContainer"></div>
