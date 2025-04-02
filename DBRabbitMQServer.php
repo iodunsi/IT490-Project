@@ -365,7 +365,7 @@ function shareArticle($request) {
         $mail = new PHPMailer(true);
         // Server settings
         $mail->isSMTP();
-        $mail->Host = 'smtp.example.com';
+        $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
         $mail->Username = getenv("EMAIL_USER");
         $mail->Password = getenv("EMAIL_PASS"); 
@@ -373,7 +373,7 @@ function shareArticle($request) {
         $mail->Port = 587;
 
         // Sender & Recipient
-        $mail->setFrom('your_email@example.com', 'News Nexus');
+        $mail->setFrom(getenv("EMAIL_USER"), 'News Nexus');
         $mail->addAddress($recipientEmail);
 
         // Email content
