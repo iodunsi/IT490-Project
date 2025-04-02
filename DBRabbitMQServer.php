@@ -343,11 +343,11 @@ echo "[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n";
 
 $loginServer = new rabbitMQServer("testRabbitMQ.ini", "loginQueue");
 $registerServer = new rabbitMQServer("testRabbitMQ.ini", "registerQueue");
-$likeServer = new rabbitMQServer("testRabbitMQ.ini", "newsQueue");
+$newsServer = new rabbitMQServer("testRabbitMQ.ini", "newsQueue");
 
 pcntl_fork() == 0 && $loginServer->process_requests("requestProcessor") && exit();
 pcntl_fork() == 0 && $registerServer->process_requests("requestProcessor") && exit();
-pcntl_fork() == 0 && $likeServer->process_requests("requestProcessor") && exit();
+pcntl_fork() == 0 && $newsServer->process_requests("requestProcessor") && exit();
 
 pcntl_wait($status);
 pcntl_wait($status);
