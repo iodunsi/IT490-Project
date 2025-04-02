@@ -566,33 +566,33 @@
         }
       }
 
-      function shareArticle(articleId, url) {
-        const username = sessionStorage.getItem("username");
-        const recipient = document
-          .getElementById(`share-user-${articleId}`)
-          .value.trim();
-
-        if (!recipient) {
-          alert("Please enter a username to share with.");
-          return;
-        }
+      function shareArticle(articleId, title, url) {
+        const toUser = prompt(
+          "Enter the username of the person you want to share this with:"
+        );
+        if (!toUser) return;
 
         fetch("/share_article.php", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            sender: username,
-            recipient: recipient,
+            to_user: toUser,
+            articleId: articleId,
+            title: title,
             url: url,
+            timestamp: new Date().toISOString(),
           }),
         })
           .then((res) => res.json())
           .then((data) => {
-            alert(data.message);
+            if (data.status === "success") {
+              alert("Article shared successfully!");
+            } else {
+              alert("Failed to share article: " + data.message);
+            }
           })
           .catch((err) => {
             console.error("Error sharing article:", err);
-            alert("Failed to share article.");
           });
       }
 
