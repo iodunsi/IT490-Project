@@ -55,8 +55,9 @@ try {
             $mail->Password = $smtp_pass;
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = $smtp_port;
-
-            $mail->setFrom('no-reply@yourdomain.com', 'IT490 Team');
+            $mail->CharSet = 'UTF-8';
+            $mail->Encoding = 'base64';
+            $mail->setFrom('no-reply@yourdomain.com', 'News Nexus');
             $mail->addAddress($email_data['to']);
             $mail->Subject = $email_data['subject'];
             $mail->Body = $email_data['message'];
