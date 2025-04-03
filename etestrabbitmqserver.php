@@ -126,8 +126,8 @@ function sendWelcomeEmail($email, $first_name) {
         $request = [
             "type" => "send_email",
             "to" => $email,
-            "subject" => "Welcome to IT490 Project!",
-            "message" => "Hello $first_name, <br><br>Thank you for registering! We’re excited to have you on board. <br><br>Regards, <br>IT490 Team"
+            "subject" => "Welcome to News Nexus! 🗞️",
+            "message" => "Hello $first_name, <br><br>Thank you for registering! We’re excited to have you on board. <br><br>Regards, <br><h2>News Nexus Team</h2>"
         ];
         error_log("[DEBUG] Sending email request: " . json_encode($request) . "\n", 3, "/var/log/rabbitmq_errors.log");
         $response = $client->send_request($request);
