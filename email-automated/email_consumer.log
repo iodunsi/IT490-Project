@@ -1,0 +1,30 @@
+Thu Apr 17 05:45:01 PM EDT 2025: Starting email_consumer.php
+PHP Warning:  require(/home/paa39/git/IT490-Project/email-tests/vendor/autoload.php): Failed to open stream: No such file or directory in /home/paa39/git/IT490-Project/email-tests/email_consumer.php on line 2
+PHP Fatal error:  Uncaught Error: Failed opening required '/home/paa39/git/IT490-Project/email-tests/vendor/autoload.php' (include_path='.:/usr/share/php') in /home/paa39/git/IT490-Project/email-tests/email_consumer.php:2
+Stack trace:
+#0 {main}
+  thrown in /home/paa39/git/IT490-Project/email-tests/email_consumer.php on line 2
+Thu Apr 17 05:51:58 PM EDT 2025: Starting email_consumer.php
+[DEBUG] Connecting to RabbitMQ at 127.0.0.1...
+[DEBUG] Connected to RabbitMQ successfully!
+[EMAIL📧] Waiting for email messages...
+[DEBUG] Checking for messages...
+PHP Fatal error:  Uncaught PhpAmqpLib\Exception\AMQPRuntimeException: Error sending data in /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Wire/IO/StreamIO.php:186
+Stack trace:
+#0 /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Wire/IO/StreamIO.php(240): PhpAmqpLib\Wire\IO\StreamIO->write()
+#1 /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Wire/IO/StreamIO.php(225): PhpAmqpLib\Wire\IO\StreamIO->write_heartbeat()
+#2 /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Wire/IO/StreamIO.php(145): PhpAmqpLib\Wire\IO\StreamIO->check_heartbeat()
+#3 /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Wire/AMQPReader.php(147): PhpAmqpLib\Wire\IO\StreamIO->read()
+#4 /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Wire/AMQPReader.php(105): PhpAmqpLib\Wire\AMQPReader->rawread()
+#5 /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Connection/AbstractConnection.php(528): PhpAmqpLib\Wire\AMQPReader->read()
+#6 /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Connection/AbstractConnection.php(568): PhpAmqpLib\Connection\AbstractConnection->wait_frame()
+#7 /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Channel/AbstractChannel.php(214): PhpAmqpLib\Connection\AbstractConnection->wait_channel()
+#8 /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Channel/AbstractChannel.php(355): PhpAmqpLib\Channel\AbstractChannel->next_frame()
+#9 /home/paa39/git/IT490-Project/email-tests/email_consumer.php(85): PhpAmqpLib\Channel\AbstractChannel->wait()
+#10 {main}
+  thrown in /home/paa39/git/IT490-Project/email-tests/vendor/videlalvaro/php-amqplib/PhpAmqpLib/Wire/IO/StreamIO.php on line 186
+Thu Apr 17 06:41:19 PM EDT 2025: Starting email_consumer.php
+[DEBUG] Connecting to RabbitMQ at 127.0.0.1...
+[DEBUG] Connected to RabbitMQ successfully!
+[EMAIL📧] Waiting for email messages...
+[DEBUG] Checking for messages...
