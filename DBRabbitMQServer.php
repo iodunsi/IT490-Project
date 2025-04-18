@@ -1,4 +1,3 @@
-#!/usr/bin/php
 <?php
 require_once('path.inc');
 require_once('get_host_info.inc');
@@ -12,13 +11,13 @@ use PHPMailer\PHPMailer\Exception;
 ini_set("log_errors", 1);
 ini_set("error_log", "/var/log/rabbitmq_errors.log");
 
-// ✅ Load environment variables
+// Load environment variables
 function loadEnv() {
     if (!file_exists('.env')) {
         error_log("Error: .env file not found");
-        return;
+        exit(1);
     }
-    $lines = file('.env');
+    $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
         if (strpos(trim($line), '#') === 0) continue;
         $keyValue = explode('=', trim($line), 2);
@@ -30,12 +29,12 @@ function loadEnv() {
 
 loadEnv();
 
-// ✅ Establish database connection
+// Establish database connection
 function getDatabaseConnection() {
-    $dbHost = getenv("DB_HOST");
-    $dbUser = getenv("DB_USER");
-    $dbPassword = getenv("DB_PASSWORD");
-    $dbName = getenv("DB_NAME");
+    $dbHost = getenv("DB_HOST") ?: "127.0.0.1";
+    $dbUser = getenv("DB_USER") ?: "testUser";
+    $dbPassword = getenv("DB_PASSWORD") ?: "12345";
+    $dbName = getenv("DB_NAME") ?: "login";
 
     $db = new mysqli($dbHost, $dbUser, $dbPassword, $dbName);
     if ($db->connect_errno) {
@@ -45,7 +44,7 @@ function getDatabaseConnection() {
     return $db;
 }
 
-// ✅ Request Processor
+// Request Processor
 function requestProcessor($request) {
     $sanitizedRequest = $request;
     if (isset($sanitizedRequest['password'])) {
@@ -69,12 +68,11 @@ function requestProcessor($request) {
         "comment" => saveComment($request),
         "get_comments" => fetchComments($request),
         "share" => shareArticle($request),
-
         default => ["status" => "error", "message" => "Unknown request type"]
     };
 }
 
-// ✅ Validate user login
+// Validate user login
 function validateLogin($username, $password) {
     $db = getDatabaseConnection();
     if (!$db) return ["status" => "error", "message" => "Database connection failed"];
@@ -121,7 +119,7 @@ function validateLogin($username, $password) {
     ];
 }
 
-// ✅ Register a new user
+// Register a new user
 function registerUser($data) {
     $db = getDatabaseConnection();
     if (!$db) return ["status" => "error", "message" => "Database connection failed"];
@@ -142,14 +140,45 @@ function registerUser($data) {
     if (!$stmt) return ["status" => "error", "message" => "Database error"];
 
     $stmt->bind_param("ssssss", $data['username'], $data['password'], $data['first_name'], $data['last_name'], $data['dob'], $data['email']);
-    $stmt->execute();
-    $stmt->close();
-    $db->close();
-
-    return ["status" => "success", "message" => "User registered successfully"];
+    if ($stmt->execute()) {
+        $stmt->close();
+        $db->close();
+        return sendWelcomeEmail($data['email'], $data['first_name']);
+    } else {
+        $stmt->close();
+        $db->close();
+        return ["status" => "error", "message" => "User registration failed"];
+    }
 }
 
-// ✅ User logout
+// Send Welcome Email via RabbitMQ
+function sendWelcomeEmail($email, $first_name) {
+    try {
+        error_log("[DEBUG] Initializing rabbitMQClient for emailQueue", 3, "/var/log/rabbitmq_errors.log");
+        $client = new rabbitMQClient("emailRabbitMQ.ini", "emailQueue");
+        $request = [
+            "type" => "send_email",
+            "to" => $email,
+            "subject" => "Welcome to News Nexus!",
+            "message" => "Hello $first_name, <br><br>Thank you for registering! We’re excited to have you on board. <br><br>Regards, <br><h2>News Nexus Team</h2>"
+        ];
+        error_log("[DEBUG] Sending to emailQueue: " . json_encode($request), 3, "/var/log/rabbitmq_errors.log");
+        $response = $client->send_request($request);
+        error_log("[DEBUG] emailQueue response: " . json_encode($response), 3, "/var/log/rabbitmq_errors.log");
+        if ($response && isset($response['status']) && $response['status'] === "success") {
+            return ["status" => "success", "message" => "User registered and email sent"];
+        } else {
+            return ["status" => "error", "message" => "User registered, but email failed: " . json_encode($response)];
+        }
+    } catch (Exception $e) {
+        error_log("[ERROR] Email send failed: " . $e->getMessage(), 3, "/var/log/rabbitmq_errors.log");
+        return ["status" => "error", "message" => "User registered, but email request failed: " . $e->getMessage()];
+    }
+}
+
+
+
+// User logout
 function logoutUser($data) {
     $db = getDatabaseConnection();
     if (!$db) return ["status" => "error", "message" => "Database connection failed"];
@@ -165,11 +194,11 @@ function logoutUser($data) {
     return ["status" => "success", "message" => "User logged out successfully"];
 }
 
-function rateArticle($request) {
+// Like an article
+function likeArticle($request) {
     $db = getDatabaseConnection();
     if (!$db) return ["status" => "error", "message" => "Database connection failed"];
 
-    // Get user ID
     $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
     $stmt->bind_param("s", $request['user']);
     $stmt->execute();
@@ -185,21 +214,59 @@ function rateArticle($request) {
     $stmt->fetch();
     $stmt->close();
 
-    // Check if rating exists
+    $stmt = $db->prepare("SELECT id FROM likes WHERE user_id = ? AND article_id = ?");
+    $stmt->bind_param("is", $userId, $request['articleId']);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        $stmt->close();
+        $db->close();
+        return ["status" => "success", "message" => "Article already liked"];
+    }
+    $stmt->close();
+
+    $stmt = $db->prepare("INSERT INTO likes (user_id, article_id, title, url, category, liked_at) VALUES (?, ?, ?, ?, ?, NOW())");
+    $stmt->bind_param("issss", $userId, $request['articleId'], $request['title'], $request['url'], $request['category']);
+    $stmt->execute();
+    $stmt->close();
+    $db->close();
+
+    return ["status" => "success", "message" => "Article liked successfully"];
+}
+
+// Rate an article
+function rateArticle($request) {
+    $db = getDatabaseConnection();
+    if (!$db) return ["status" => "error", "message" => "Database connection failed"];
+
+    $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
+    $stmt->bind_param("s", $request['user']);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows === 0) {
+        $stmt->close();
+        $db->close();
+        return ["status" => "error", "message" => "User not found"];
+    }
+
+    $stmt->bind_result($userId);
+    $stmt->fetch();
+    $stmt->close();
+
     $stmt = $db->prepare("SELECT id FROM ratings WHERE user_id = ? AND article_id = ?");
     $stmt->bind_param("is", $userId, $request['articleId']);
     $stmt->execute();
     $stmt->store_result();
 
     if ($stmt->num_rows > 0) {
-        // Update existing rating
         $stmt->close();
         $stmt = $db->prepare("UPDATE ratings SET rating = ?, rated_at = NOW() WHERE user_id = ? AND article_id = ?");
         $stmt->bind_param("iis", $request['rating'], $userId, $request['articleId']);
         $stmt->execute();
         $stmt->close();
     } else {
-        // Insert new rating
         $stmt->close();
         $stmt = $db->prepare("INSERT INTO ratings (user_id, article_id, title, url, rating, rated_at) VALUES (?, ?, ?, ?, ?, NOW())");
         $stmt->bind_param("isssi", $userId, $request['articleId'], $request['title'], $request['url'], $request['rating']);
@@ -213,19 +280,18 @@ function rateArticle($request) {
     $stmt->bind_result($avgRating);
     $stmt->fetch();
     $stmt->close();
-
     $db->close();
+
     return [
         "status" => "success",
         "message" => "Article rated successfully",
         "article_id" => $request['articleId'],
         "timestamp" => date("c"),
         "averageRating" => round($avgRating, 1)
-        ];
-
+    ];
 }
 
-
+// Get average rating
 function getAverageRating($request) {
     $db = getDatabaseConnection();
     if (!$db) return ["status" => "error", "message" => "Database connection failed"];
@@ -244,71 +310,11 @@ function getAverageRating($request) {
     ];
 }
 
-
-// ✅ Like an article
-function likeArticle($request) {
+// Save a comment
+function saveComment($request) {
     $db = getDatabaseConnection();
     if (!$db) return ["status" => "error", "message" => "Database connection failed"];
 
-    // Fetch the user ID based on the username
-    $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
-    if (!$stmt) {
-        error_log("Database error while preparing statement: " . $db->error);
-        return ["status" => "error", "message" => "Database error"];
-    }
-
-    $stmt->bind_param("s", $request['user']);
-    $stmt->execute();
-    $stmt->store_result();
-    
-    // Check if the user exists
-    if ($stmt->num_rows === 0) {
-        $stmt->close();
-        $db->close();
-        return ["status" => "error", "message" => "User not found"];
-    }
-
-    // Bind the result to the user ID variable
-    $stmt->bind_result($userId);
-    $stmt->fetch();
-    $stmt->close();
-
-    $stmt = $db->prepare("SELECT id FROM likes WHERE user_id = ? AND article_id = ?");
-    
-    $stmt->bind_param("is", $userId, $request['articleId']);
-    $stmt->execute();
-    $stmt->store_result();
-
-    if ($stmt->num_rows > 0) {
-        $stmt->close();
-        $db->close();
-        return ["status" => "success", "message" => "Article already liked"];
-    }
-    $stmt->close();
-
-    // Insert the like record
-    $stmt = $db->prepare("INSERT INTO likes (user_id, article_id, title, url, category, liked_at) VALUES (?, ?, ?, ?, ?, NOW())");
-    if (!$stmt) {
-        error_log("Database error while preparing insert statement: " . $db->error);
-        return ["status" => "error", "message" => "Database error"];
-    }
-
-    $stmt->bind_param("issss", $userId, $request['articleId'], $request['title'], $request['url'], $request['category']);
-    if (!$stmt->execute()) {
-        error_log("Database error while executing insert statement: " . $stmt->error);
-        $stmt->close();
-        $db->close();
-        return ["status" => "error", "message" => "Error inserting like record"];
-    }
-
-    $stmt->close();
-    $db->close();
-
-    return ["status" => "success", "message" => "Article liked successfully"];
-}
-
-function saveComment($request) {
-    $db = getDatabaseConnection();
     $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
     $stmt->bind_param("s", $request['user']);
     $stmt->execute();
@@ -317,7 +323,7 @@ function saveComment($request) {
     $stmt->close();
 
     $stmt = $db->prepare("INSERT INTO comments (user_id, article_id, title, comment, created_at) VALUES (?, ?, ?, ?, NOW())");
-    $stmt->bind_param("isss", $userId, $request['articleId'], $request['title'], $request['comment']);
+    $stmt->bind_param("isss", $userId, $request['articleId'], $request['_title'], $request['comment']);
     $stmt->execute();
     $stmt->close();
     $db->close();
@@ -325,8 +331,11 @@ function saveComment($request) {
     return ["status" => "success", "message" => "Comment saved"];
 }
 
+// Fetch comments
 function fetchComments($request) {
     $db = getDatabaseConnection();
+    if (!$db) return ["status" => "error", "message" => "Database connection failed"];
+
     $stmt = $db->prepare("SELECT u.username, c.comment FROM comments c JOIN users u ON c.user_id = u.id WHERE c.article_id = ? ORDER BY c.created_at DESC");
     $stmt->bind_param("s", $request['articleId']);
     $stmt->execute();
@@ -342,11 +351,10 @@ function fetchComments($request) {
     return ["status" => "success", "comments" => $comments];
 }
 
+// Share an article
 function shareArticle($request) {
     $db = getDatabaseConnection();
-    if (!$db) {
-        return ["status" => "error", "message" => "Database connection failed"];
-    }
+    if (!$db) return ["status" => "error", "message" => "Database connection failed"];
 
     $stmt = $db->prepare("SELECT email FROM users WHERE username = ?");
     $stmt->bind_param("s", $request['to_user']);
@@ -366,21 +374,18 @@ function shareArticle($request) {
         $mail->CharSet = 'UTF-8';
         $mail->Encoding = 'base64';
 
-        // Server settings
         $mail->isSMTP();
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
         $mail->Username = getenv("EMAIL_USER");
-        $mail->Password = getenv("EMAIL_PASS"); 
+        $mail->Password = getenv("EMAIL_PASS");
         $mail->SMTPSecure = 'tls';
         $mail->Port = 587;
 
-        // Sender & Recipient
         $mail->setFrom(getenv("EMAIL_USER"), 'News Nexus');
         $mail->addAddress($recipientEmail);
         $mail->addReplyTo(getenv("EMAIL_USER"), 'News Nexus');
 
-        // Email content
         $mail->isHTML(true);
         $mail->Subject = "{$request['from_user']} shared an article with you!";
         $mail->Body = "
@@ -389,7 +394,6 @@ function shareArticle($request) {
             <p><a href=\"{$request['url']}\">Read Article</a></p>
             <p><em>Shared via News Nexus</em></p>
         ";
-
         $mail->AltBody = "{$request['from_user']} shared an article: {$request['url']}";
 
         $mail->send();
@@ -400,8 +404,7 @@ function shareArticle($request) {
     }
 }
 
-
-// ✅ Server startup
+// Server startup
 echo "[RABBITMQ VM] 🚀 RabbitMQ Server is waiting for messages...\n";
 
 $loginServer = new rabbitMQServer("testRabbitMQ.ini", "loginQueue");
@@ -412,9 +415,10 @@ pcntl_fork() == 0 && $loginServer->process_requests("requestProcessor") && exit(
 pcntl_fork() == 0 && $registerServer->process_requests("requestProcessor") && exit();
 pcntl_fork() == 0 && $newsServer->process_requests("requestProcessor") && exit();
 
-pcntl_wait($status);
-pcntl_wait($status);
-pcntl_wait($status);
-
-exit();
+while (true) {
+    pcntl_wait($status);
+    sleep(1);
+}
 ?>
+
+
