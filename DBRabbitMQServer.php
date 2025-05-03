@@ -136,10 +136,10 @@ function registerUser($data) {
     }
 
     $stmt->close();
-    $stmt = $db->prepare("INSERT INTO users (username, password, first_name, last_name, dob, email, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+    $stmt = $db->prepare("INSERT INTO users (username, password, first_name, last_name, dob, email, phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
     if (!$stmt) return ["status" => "error", "message" => "Database error"];
 
-    $stmt->bind_param("ssssss", $data['username'], $data['password'], $data['first_name'], $data['last_name'], $data['dob'], $data['email']);
+    $stmt->bind_param("ssssss", $data['username'], $data['password'], $data['first_name'], $data['last_name'], $data['dob'], $data['email'], $data['phone']);
     if ($stmt->execute()) {
         $stmt->close();
         $db->close();
