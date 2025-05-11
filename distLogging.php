@@ -1,8 +1,8 @@
 #!/usr/bin/php
 <?php
-require_once('../path.inc');
-require_once('../get_host_info.inc');
-require_once('../rabbitMQLib.inc');
+require_once('path.inc');
+require_once('get_host_info.inc');
+require_once('rabbitMQLib.inc');
 
 function sendLog($message){
 	$client = new rabbitMQClient("/rabbitmqini/rabbitMQ.ini",'distLogging');;
@@ -14,4 +14,8 @@ function sendLog($message){
 	$request['message'] = $log;
 	$client->logPublish($request);
 }
+
+sendLog("Test log message from broker");
+echo "Log message sent.\n";
 ?>
+
