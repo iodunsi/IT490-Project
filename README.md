@@ -1,4 +1,4 @@
-# IT 490 Systems Integration Capstone Project
+# NewsNexus: IT 490 Systems Integration Capstone Project
 
 This repository contains my contributions to a collaborative capstone project completed at NJIT as part of the IT 490: Systems Integration course. The project was designed to simulate a real-world production environment and integrate core Information Technology disciplines into a single full-stack system.
 
