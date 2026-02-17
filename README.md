@@ -42,13 +42,8 @@ This final submission demo shows the full functionality of the project including
 - [Final Project Demo](https://drive.google.com/file/d/1YbHj0ar-YpbsmTwJBQGTjPqIEMtJnyz-/view)
 
 ### Individual Milestone Demonstrations
-The following videos highlight specific technical milestones accomplished with my group over the course of the project during development and testing: 
 
-- Enabling email notifications when a new user registered with [Mailtrap SMTP sandbox](https://drive.google.com/file/d/1D247HFYGe4Rdt1faDKJSIR1YEHw2S13c/view?usp=drive_link)
-- [Distributed logging](https://drive.google.com/file/d/1PeMUDYw7vCuuWg2okK__TYUuXpDfSFS0/view?usp=drive_link)
--[Authentication](https://drive.google.com/file/d/1fPbhGY0w5mYK5hecwjTfmHrOKerUgb0H/view?usp=drive_link)
--[Search Feature, Rating Articles, Share Articles](https://drive.google.com/file/d/1x6PoY2xgeVdqxDccDLOWlFWK7yG-cx7B/view?usp=drive_link)
--[Commenting Feature, SSL Certificate Requirement, Responsive Web Design Requirement, Password Hashing Requirement](https://drive.google.com/file/d/19-z7Lvx537pSkIYPfI2WRPe_AAXMMFJ_/view?usp=drive_link)
+The following videos highlight specific technical milestones accomplished with my group over the course of the project during development and testing: 
 
 - Enabling email notifications for new user registration using Mailtrap SMTP sandbox  
   - [View Demo](https://drive.google.com/file/d/1D247HFYGe4Rdt1faDKJSIR1YEHw2S13c/view?usp=drive_link)
@@ -62,5 +57,5 @@ The following videos highlight specific technical milestones accomplished with m
 - Search functionality, article rating, and content sharing features  
   - [View Demo](https://drive.google.com/file/d/1x6PoY2xgeVdqxDccDLOWlFWK7yG-cx7B/view?usp=drive_link)
 
-  - Commenting functionality, SSL certificate validation, Responsive web design, Password hashing
+- Commenting functionality, SSL certificate validation, Responsive web design, Password hashing
   - [View Demo](https://drive.google.com/file/d/19-z7Lvx537pSkIYPfI2WRPe_AAXMMFJ_/view?usp=drive_link)
